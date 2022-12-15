@@ -1,0 +1,40 @@
+<div class="uk-grid-small uk-form-stacked" uk-grid>
+  {% for i in record.identifications.all() %}
+  <div class="uk-card uk-card-default uk-card-body uk-width-1-1@s">
+    <div class="uk-grid-small uk-form-stacked" uk-grid>
+      <div class="uk-width-5-6@s">
+        <div class="uk-margin">
+          <label class="uk-form-label">學名</label>
+          <div class="uk-form-controls">
+            <input class="uk-input" type="text" name="" value="" />
+          </div>
+        </div>
+      </div>
+      <div class="uk-width-1-6@s">
+        <div class="uk-margin">
+          <label class="uk-form-label">編號</label>
+          <div class="uk-form-controls">
+            <input class="uk-input" type="text" name="" value="" />
+          </div>
+        </div>
+      </div>
+      <div class="uk-width-1-2@s">
+        <div class="uk-margin">
+          <label class="uk-form-label">鑑定者</label>
+          <div class="uk-form-controls">
+            <input class="uk-input" type="text" name="" value="" />
+          </div>
+        </div>
+      </div>
+      <div class="uk-width-1-2@s">
+        <div class="uk-margin">
+          <label class="uk-form-label">鑑定日期</label>
+          <div class="uk-form-controls">
+            <input class="uk-input" type="date" name="" value="" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>

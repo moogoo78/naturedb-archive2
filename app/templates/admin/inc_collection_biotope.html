@@ -1,0 +1,20 @@
+<div class="uk-grid-small uk-form-stacked" uk-grid>
+{% for i in record.get_biotope_list() %}
+  <div class="uk-width-1-1@s">
+    <div class="uk-margin">
+      <label class="uk-form-label">{{ i.label }}</label>
+      <div class="uk-form-controls">
+        <input class="uk-input" type="text" name="biotope__{{ i.name }}" value="{{i.value.value }}" />
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+    <div class="uk-width-1-2@s">
+    <div class="uk-margin">
+      <label class="uk-form-label">計畫</label>
+      <div class="uk-form-controls">
+        <input class="uk-input" type="text" name="project" value="" />
+      </div>
+    </div>
+  </div>
+</div>

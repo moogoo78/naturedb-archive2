@@ -1,0 +1,118 @@
+
+{% extends "base.html" %}
+
+{% block style %}
+<style>
+ .data-label {
+   font-weight: bold;
+ }
+ .data-heading {
+   font-size: 20px;
+   color: #6c6c6c;
+   font-weight: normal;
+   padding: 6px 2px;
+   border-bottom: #2ca52c solid 2px;
+   margin-top: 16px;
+ }
+ .page-header {
+   font-size: 22px;
+   font-weight: bold;
+ }
+ .page-header__subtitle {
+   font-size: 14px;
+   font-weight: unset;
+ }
+ .id-wrapper {
+   margin: 10px;
+   padding: 4px;
+   border: #d3d3d3 solid 2px;
+   background-color: #eeeeee;
+ }
+</style>
+{% endblock %}
+
+{% macro display_data(label, text='') -%}
+<div class="grid is-gap-xs">
+  <div class="column data-label">
+    {{ label }}:
+  </div>
+  <div class="column">
+    {{ text }}
+  </div>
+</div>
+{%- endmacro %}
+
+{% block main %}
+<div class="card is-bg-light is-floating">
+  <div class="box is-padding-md">
+    <h1 class="page-header">館號: {{ item.accession_number }} <small class="page-header__subtitle text is-dark-6">{{ item.display_kind_of_unit() }}</small></h1>
+    <h3 class="data-heading">採集資訊</h3>
+    <div class="card is-bg-light is-outline">
+      <div class="grid is-gap-md">
+        <div class="column is-0">
+          <div class="box is-padding-md ">
+            <h4>鑑定紀錄</h4>
+            {% for i in item.collection.identifications.all() %}
+            <div class="id-wrapper">
+              <div class="scientific-name">{{ i.taxon.full_scientific_name }}</div>
+              {{ display_data('鑑定者', i.identifier.display_name() if i.identifier else "") }}
+              {{ display_data('鑑定日期', i.date) }}
+            </div>
+              {% endfor %}
+            <h4>基本資訊</h4>
+            {{ display_data('採集者', item.collection.collector.display_name()) }}
+            {{ display_data('隨同人員', item.collection.companion_text) }}
+            {{ display_data('採集號', item.collection.field_number) }}
+            {{ display_data('採集日期', item.collection.collect_date.strftime('%Y-%m-%d')) }}
+            <h4>地點</h4>
+            {% for i in item.collection.named_area_relations %}
+            {{ display_data(i.named_area.area_class.label, i.named_area.display_name() )}}
+            {% endfor %}
+            {{ display_data('詳細地點', item.collection.locality_text )}}
+            {{ display_data('經緯度', item.collection.get_coordinates('dms').simple )}}
+            {{ display_data('海拔(m)', item.collection.display_altitude() )}}
+          </div>
+        </div>
+        <div class="column is-0">
+          <div class="card is-radius-md is-bg-light is-outline">
+            <div class="box is-padding-md"><img src="{{ item.get_image('_m') }}" /></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <h3 class="data-heading">描述</h3>
+    <div class="card is-bg-light is-outline">
+      <div class="box is-padding-md">
+        <h4>植群/環境</h4>
+        {% for i in item.collection.biotope_measurement_or_facts %}
+        {{ display_data(i.parameter.name, i.value )}}
+        {% endfor %}
+        <h4>物候</h4>
+        {% for i in item.measurement_or_facts %}
+        {{ display_data(i.parameter.name, i.value )}}
+        {% endfor %}
+      </div>
+    </div>
+    <h3 class="data-heading">備註</h3>
+    <div class="card is-bg-light is-outline">
+      <div class="box is-padding-md">
+        {{ display_data('採集備註', item.collection.field_note) }}
+        <h4>標註</h4>
+        {% for i in item.annotations %}
+        {{ display_data(i.display_category(), i.text) }}
+        {% endfor %}
+      </div>
+    </div>
+    <h3 class="data-heading">生態照</h3>
+    <div class="card is-bg-light is-outline">
+      <div class="grid is-padding-md">
+        {% for i in item.multimedia_objects %}
+        <div class="column is-4"><img src="{{ i.file_url }}" alt="" /></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{% endblock %}

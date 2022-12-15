@@ -1,0 +1,35 @@
+{% extends "admin/base.html" %}
+
+{% block main %}
+<div class="uk-overflow-auto">
+  <a href="{{ url_for('admin.'+register.name+'-create')}}" class="uk-button uk-button-primary">Create</a>
+  <table class="uk-table uk-table-small uk-table-striped uk-table-middle uk-table-hover uk-table-divider">
+    <thead>
+      <tr>
+        <th class="uk-table-shrink"></th>
+        <th class="uk-table-shrink">#</th>
+        {% for key in register.list_display %}
+        <th>{{ register.fields[key].label }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <td><a href="{{ url_for('admin.'+register.name+'-form', item_id=item.id)}}" uk-icon="icon: pencil"> edit</a></td>
+        <td>{{ loop.index }}</td>
+        {% for key in register.list_display %}
+        <td class="uk-text-truncate">
+          {% if register.fields[key].display %}
+          {{ item[key][register.fields[key].display] }}
+          {% else %}
+          {{ item[key] }}
+          {% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

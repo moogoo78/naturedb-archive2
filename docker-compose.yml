@@ -1,0 +1,44 @@
+version: "3.7"
+
+x-default-volumes: &default-volumes
+  volumes:
+    #- ./:/app
+    #- node-module:/app/node_module
+    - ../naturedb-volumes/bucket:/bucket
+
+services:
+  flask:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+      args:
+        PYTHON_VERSION: ${ARG_PYTHON_VERSION}
+    #target: flask-dev
+    image: naturedb-flask-${WEB_ENV}-image
+    container_name: naturedb-flask-${WEB_ENV}-container
+    depends_on:
+      - postgres
+    environment:
+      - FLASK_APP=app
+      - WEB_ENV=${WEB_ENV}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - .:/code
+      - ../naturedb-volumes/bucket:/bucket
+    command: /srv/start
+
+  postgres:
+    image: postgres:14-alpine
+    container_name: naturedb-postgres-${WEB_ENV}-container
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - ../naturedb-volumes/pgdata:/var/lib/postgresql/data/pgdata
+      - ../naturedb-volumes/bucket:/bucket
+    #command: ["postgres", "-c", "log_statement=all"]

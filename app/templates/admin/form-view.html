@@ -1,0 +1,46 @@
+{% extends "admin/base.html" %}
+
+{% block main %}
+<form class="uk-form-stacked uk-container-small" action="{{ action_url }}" method="POST">
+  <div class="uk-grid-small uk-form-stacked" uk-grid>
+    {% for key, value in register.fields.items() %}
+    <div class="uk-width-1-1">
+      <div class="uk-margin">
+        <label class="uk-form-label">{{ value.label }}</label>
+        <div class="uk-form-controls">
+          {% if not value.type or value.type == "text" %}
+          <input class="uk-input" type="text" name="{{ key }}" value="{% if item %}{{ item[key] }}{% endif %}" />
+          {% elif value.type == "select" and value.foreign %}
+          <select class="uk-select" name="{{ key }}_id">
+            <option value="">-- 請選擇 --</option>
+            {% for option in value.foreign.query.all() %}
+            <option value="{{ option['id'] }}"{% if item and item[key] and (option.id|int == item[key].id|int) %} selected{% endif %}>{{ option[value['display']] }}</option>
+            {% endfor %}
+          </select>
+          {% elif value.type == "select" and value.options %}
+          <select class="uk-select" name="{{ key }}">
+            <option value="">-- 請選擇 --</option>
+            {% for option in value.options %}
+            <option value="{{ option.0 }}"{% if item and (option.1 == item[key]) %} selected{% endif %}>{{ option.1 }}</option>
+            {% endfor %}
+          </select>
+          {% elif value.type == "textarea" %}
+          <textarea class="uk-textarea" name="{{ key }}">{% if item %}{{ item[key] }}{% endif %}</textarea>
+          {% elif value.type == "date" %}
+          <input class="uk-input" type="date" name="{{ key }}" value="{% if item %}{{ item[key] }}{% endif %}" />
+          {% elif value.type == "number" %}
+          <input class="uk-input" type="number" name="{{ key }}" value="{% if item %}{{ item[key] }}{% endif %}" />
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+        <div class="uk-width-1-1">
+    <div class="uk-flex uk-flex-between">
+      <button class="uk-button uk-button-primary" type="submit">Save</button>
+      {% if item %}<a class="uk-button uk-button-danger phok-item-delete-confirm" data-deleteurl="{{ url_for('admin.'+register.name+'-form', item_id=item.id) }}" href="">Delete</a>{% endif %}
+    </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
