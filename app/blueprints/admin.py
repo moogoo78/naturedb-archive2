@@ -26,6 +26,7 @@ from app.models.site import (
 )
 from app.models.collection import (
     Collection,
+    Entity,
     #MeasurementOrFactParameter,
     #MeasurementOrFactParameterOption,
     #MeasurementOrFactParameterOptionGroup,
@@ -134,6 +135,14 @@ ADMIN_REGISTER_MAP = {
         },
         'list_display':('rank', 'full_scientific_name', 'common_name')
     },
+    'collection': {
+        'name': 'collection',
+        'fields': {
+            'label': { 'label': '標題' },
+            'name': { 'label': 'key',},
+        },
+        'list_display': ('label', 'name')
+    },
     'assertion_type': {
         'name': 'assertion_type',
         'fields': {
@@ -154,16 +163,16 @@ ADMIN_REGISTER_MAP = {
 def index():
     return render_template('admin/dashboard.html')
 
-@admin.route('/collections/', methods=['GET'])
+@admin.route('/entities/', methods=['GET'])
 @login_required
-def list_collection():
-    return render_template('admin/list-view-collection.html')
+def list_entity():
+    return render_template('admin/list-view-entity.html')
 
-@admin.route('/collections/<int:item_id>', methods=['GET'])
+@admin.route('/entities/<int:item_id>', methods=['GET'])
 @login_required
-def get_collection(item_id):
-    if obj := Collection.query.get(item_id):
-        return render_template('admin/form-view-collection.html', record=obj)
+def get_entity(item_id):
+    if obj := Entity.query.get(item_id):
+        return render_template('admin/form-view-entity.html', entity=obj)
 
 
 
@@ -271,7 +280,8 @@ MODEL_MAP = [
     #('measurement_or_fact_parameter_option_group', 'measurement_or_fact_parameter_option_groups', MeasurementOrFactParameterOptionGroup),
     #('measurement_or_fact_parameter_option', 'measurement_or_fact_parameter_options', MeasurementOrFactParameterOption),
     ('taxon', 'taxa', Taxon, Taxon.query.limit(20)),
-    ('assertion_type', 'assertion_types', AssertionType)
+    ('collection', 'collections', Collection),
+    ('assertion_type', 'assertion_types', AssertionType),
 ]
 for i in MODEL_MAP:
     admin.add_url_rule(

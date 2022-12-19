@@ -30,6 +30,22 @@ from app.utils import (
     dd2dms,
 )
 
+def get_structed_list(options, value_dict={}):
+    '''structed_list
+    dict key must use id (str)
+    '''
+    res = []
+    for i, option in enumerate(options):
+        name = option.get('name')
+        res.append({
+            'id': option.get('id', ''),
+            'name': name,
+            'label': option.get('label', ''),
+            'value': value_dict.get(name),
+        })
+    return res
+
+
 class Collection(Base, TimestampMixin):
     __tablename__ = 'collection'
 
@@ -99,6 +115,7 @@ class Entity(Base, TimestampMixin):
     # proxy_units = Column(JSONB)
     units = relationship('Unit')
 
+    collection_id = Column(Integer, ForeignKey('collection.id'))
     project_id = Column(Integer, ForeignKey('project.id'))
     project = relationship('Project')
 
@@ -364,8 +381,11 @@ class Entity(Base, TimestampMixin):
         named_area_map = {f'{x.area_class.name}': x.to_dict() for x in self.named_areas}
         return get_structed_list(AreaClass.DEFAULT_OPTIONS, named_area_map)
 
+    def get_assertion_list(self):
+        at_list = AssertionType.query.filter(AssertionType.collection_id==self.collection_id, AssertionType.target=='entity').order_by('sort').all()
+        return at_list
 
-    def get_biotope_list(self):
+    def get_biotope_list_DEPRECATED(self):
         biotope_map = {f'{x.parameter.name}': x.to_dict() for x in self.biotope_measurement_or_facts}
         biotopes = get_structed_list(MeasurementOrFact.BIOTOPE_OPTIONS, biotope_map)
         return biotopes
@@ -635,10 +655,14 @@ class Unit(Base, TimestampMixin):
                 items.append(item)
         return items
 
-    def get_measurement_or_fact_list(self):
+    def get_measurement_or_fact_list_DEPRECATED(self):
         mof_map = {f'{x.parameter.name}': x.to_dict() for x in self.measurement_or_facts}
         mofs = get_structed_list(MeasurementOrFact.UNIT_OPTIONS, mof_map)
         return mofs
+
+    def get_assertion_list(self):
+        at_list = AssertionType.query.filter(AssertionType.collection_id==self.entity.collection_id, AssertionType.target=='unit').order_by('sort').all()
+        return at_list
 
     def get_annotations(self, parameter_list=[]):
         params = {f'{x.category}': x for x in self.annotations}

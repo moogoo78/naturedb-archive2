@@ -44,6 +44,21 @@ from app.models.taxon import (
 
 api = Blueprint('api', __name__)
 
+def make_query_response(query):
+    start_time = time.time()
+
+    rows = [x.to_dict() for x in query.all()]
+    end_time = time.time()
+    elapsed = end_time - start_time
+
+    result = {
+        'data': rows,
+        'total': len(rows),
+        'query': str(query),
+        'elapsed': elapsed,
+    }
+    return result
+
 def entity_filter(stmt, payload):
     filtr = payload['filter']
 
@@ -616,9 +631,30 @@ def collection():
         return allow_cors(collection.to_dict())
 
 @api.route('/people/<int:id>', methods=['GET'])
-def get_people(id):
+def get_people_detail(id):
     obj = session.get(Person, id)
     return jsonify(obj.to_dict(with_meta=True))
+
+@api.route('/people', methods=['GET'])
+def get_people_list():
+    query = Person.query
+    if filter_str := request.args.get('filter', ''):
+        filter_dict = json.loads(filter_str)
+        collector_id = None
+        if keyword := filter_dict.get('q', ''):
+            like_key = f'{keyword}%' if len(keyword) == 1 else f'%{keyword}%'
+            query = query.filter(Person.full_name.ilike(like_key) | Person.atomized_name['en']['given_name'].astext.ilike(like_key) | Person.atomized_name['en']['inherited_name'].astext.ilike(like_key))
+        if is_collector := filter_dict.get('is_collector', ''):
+            query = query.filter(Person.is_collector==True)
+        if is_identifier := filter_dict.get('is_identifier', ''):
+            query = query.filter(Person.is_identifier==True)
+
+        if x := filter_dict.get('collector_id', ''):
+            collector_id = x
+        if x := filter_dict.get('id', ''):
+            query = query.filter(Person.id.in_(x))
+
+    return jsonify(make_query_response(query))
 
 @api.route('/taxa/<int:id>', methods=['GET'])
 def get_taxa(id):

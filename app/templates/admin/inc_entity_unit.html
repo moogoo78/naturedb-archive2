@@ -1,5 +1,5 @@
 <div class="uk-grid-small uk-form-stacked" uk-grid>
-  {% for unit in record.units %}
+  {% for unit in entity.units %}
   <div class="uk-card uk-card-default uk-card-body uk-width-1-1@s">
     <div class="uk-card-badge uk-label">{{ loop.index }}</div>
     <div class="uk-grid-small uk-form-stacked" uk-grid>
@@ -10,7 +10,7 @@
         <div class="uk-margin">
           <label class="uk-form-label">館號</label>
           <div class="uk-form-controls">
-            <input class="uk-input" type="text" name="units[loop.index].accession_number" value="{{ unit.accession_number }}" />
+            <input class="uk-input" type="text" name="units[loop.index].catalog_number" value="{{ unit.catalog_number }}" />
           </div>
         </div>
       </div>
@@ -25,12 +25,12 @@
       <div class="uk-width-1-1@s">
         <h4>測量</h4>
       </div>
-      {% for j in unit.get_measurement_or_fact_list() %}
+      {% for j in unit.get_assertion_list() %}
       <div class="uk-width-1-1@s">
         <div class="uk-margin">
           <label class="uk-form-label">{{ j.label }}</label>
           <div class="uk-form-controls">
-            <input class="uk-input" type="text" name="" value="{{ j.value.value }}" data-realid="{{ j.option_id }}"/>
+            <input class="uk-input" type="text" name="" value="{{ j.value }}" />
           </div>
         </div>
       </div>

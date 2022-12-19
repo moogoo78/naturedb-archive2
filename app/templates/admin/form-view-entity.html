@@ -1,7 +1,7 @@
 {% extends "admin/base.html" %}
 
 {% block script %}
-<script type="module" src="{{ url_for('static', filename='js/phok-form-view.js') }}"></script>
+<script type="module" src="{{ url_for('static', filename='js/admin/form-entity.js') }}"></script>
 {% endblock %}
 
 {% block main %}
@@ -10,27 +10,28 @@
     <li class="uk-open">
       <a class="uk-accordion-title" href="#">&lt; 基本資訊 &gt;</a>
       <div class="uk-accordion-content">
-        {% include "admin/inc_collection_basic.html" %}
+        {% include "admin/inc_entity_basic.html" %}
       </div>
     </li>
     <li>
       <a class="uk-accordion-title" href="#">&lt; 環境 & 其他 &gt;</a>
       <div class="uk-accordion-content">
-        {% include "admin/inc_collection_biotope.html" %}
+        {% include "admin/inc_entity_assertion.html" %}
       </div>
     </li>
     <li>
       <a class="uk-accordion-title" href="#">&lt; 鑑定 &gt;</a>
       <div class="uk-accordion-content">
-        {% include "admin/inc_collection_identifications.html" %}
+        {% include "admin/inc_entity_identification.html" %}
       </div>
     </li>
     <li>
       <a class="uk-accordion-title" href="#">&lt; 標本 &gt;</a>
       <div class="uk-accordion-content">
-        {% include "admin/inc_collection_units.html" %}
+        {% include "admin/inc_entity_unit.html" %}
       </div>
     </li>
+    
   </ul>
   <button class="uk-button uk-button-primary">儲存</button>
 </form>
