@@ -35,6 +35,12 @@ class TaxonRelation(Base):
         return f'<TaxonRelation parent={self.parent} child={self.child}>'
 
 
+class TaxonProvider(Base):
+    __tablename__ = 'taxon_provider'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(500))
+
+
 class Taxon(Base):
     '''abcd: TaxonIdentified
     '''
@@ -49,10 +55,18 @@ class Taxon(Base):
     infraspecific_epithet = Column(String(500)) # final epithet
     author = Column(String(500))
     canonical_name = Column(String(500))
-    status = Column(String(50))
+    # status = Column(String(50))
+
+    #dwc.taxonomicStatus: invalid, misapplied, homotypic synonym, accepted
+    #dwc.nomenclaturalStatus: nom. ambig., nom. illeg., nom. subnud.
+
     common_name = Column(String(500)) # abcd: InformalName
     code = Column(String(500))
     tree_id = Column(ForeignKey('taxon_tree.id', ondelete='SET NULL'))
+    #provider_source_id =
+    provider_id = Column(Integer, ForeignKey('taxon_provider.id', ondelete='SET NULL'))
+    provider_source_id = Column(String(500))
+    is_accepted = Column(Boolean, default=False)
     #hybrid_flag =
     #author_team_parenthesis
     #author_team
@@ -70,17 +84,12 @@ class Taxon(Base):
     def __repr__(self):
         return f'<Taxon id="{self.id}" name="{self.full_scientific_name}/{self.common_name}">'
 
-    def display_name(self, by=''):
-        if by == 'label':
-            s = self.full_scientific_name
-            if self.common_name:
-                return f'{s} {self.common_name}'
-            return s
-        else:
-            s = '[{}] {}'.format(self.rank, self.full_scientific_name)
-            if self.common_name:
-                s = '{} ({})'.format(s, self.common_name)
-            return s
+    @property
+    def display_name(self):
+        s = '[{}] {}'.format(self.rank, self.full_scientific_name)
+        if self.common_name:
+            s = '{} ({})'.format(s, self.common_name)
+        return s
 
     def get_parents(self):
         res = TaxonRelation.query.filter(TaxonRelation.child_id==self.id, TaxonRelation.parent_id!=self.id).order_by(TaxonRelation.depth).all()
@@ -118,7 +127,7 @@ class Taxon(Base):
             'rank': self.rank,
             'common_name': self.common_name,
             'canonical_name': self.canonical_name,
-            'display_name': self.display_name(),
+            'display_name': self.display_name,
             #'p': self.parent_id,
         }
         if with_meta is True:

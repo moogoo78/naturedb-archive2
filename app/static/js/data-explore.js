@@ -21,6 +21,7 @@ import { fetchData } from './utils.js';
     taxon: '學名',
     named_area: '地點',
     catalog_number: '館號',
+    q: '搜尋字串',
   };
   // global state
   const state = {
@@ -421,33 +422,33 @@ import { fetchData } from './utils.js';
     e.stopPropagation();
 
     let value = filterInput.value;
+    // HACK type status 
     if (filterInput.dataset.key === 'type_status') {
       value = $filterTypeStatusSelect.value;
+      myFilter.add('type_status', {
+        value: value,
+        meta: {
+          term: 'type_status',
+          label: 'Type Status',
+          display: value,
+        }
+      });
+    } else {
+      myFilter.add('q', {
+        value: `${filterInput.dataset.key}:${value}`,
+        meta: {
+          term: 'q',
+          label: `${TERM_LABELS['q']}: ${filterInput.dataset.key}`,
+          display: value,
+        }
+      });
     }
-    renderFilterToken2({
-      term: filterInput.dataset.key,
-      label: filterLabel.innerHTML,
-      text: value,
-      value: value,
-    });
+    refreshTokens();
+    filterInput.value = '';
     $filterNavCtrl.setAttribute('hidden', '');
     $filterNavList.removeAttribute('hidden');
     UIkit.dropdown('#phok-filter-dropdown').hide(false);
   }
-
-
-  const renderFilterToken2 = (item) => {
-    // no parseIem
-    //console.log(data);
-    let token = document.createElement('div');
-    const d = item; //parseItem(item);
-    token.innerHTML = `<a class="uk-alert-close" uk-close></a><p><span class="uk-label uk-label-success">${d.label}</span> = <span class="uk-text-small">${d.text}</span></p>`;
-    token.setAttribute('uk-alert', '');
-    token.classList.add('phok-token', 'uk-border-rounded', 'uk-background-default');
-    token.dataset.term = d.term;
-    token.dataset.value = d.value;
-    //tokenContainer.appendChild(token);
-  };
 
   const refreshResult = () => {
     let results = state.results;
@@ -552,9 +553,9 @@ import { fetchData } from './utils.js';
           <img src="${x.image_url.replace('_s', '_m')}" /width="150", alt="Specimen Image">
         </div>
         <div class="uk-width-expand">
-          <h5 class="uk-margin-remove-bottom">HAST ${x.catalog_number}</h5>
-          <h3 class="uk-margin-remove-top">${x.taxon_text}</h3>
-          <p>
+          <p class="uk-text-large uk-margin-remove-bottom">${x.taxon_text}</p>
+          <p class="uk-text-muted uk-margin-remove-top">
+            <b>館號:</b> ${x.catalog_number}<br />
             <b>採集者/採集號:</b> ${collector} ${x.field_number}<br />
             <b>採集日期:</b> ${x.collect_date}<br />
             <b>採集地:</b> ${namedAreas}</p>
@@ -700,6 +701,7 @@ import { fetchData } from './utils.js';
     const queryString = new URLSearchParams(payload).toString()
     const seperator = (queryString === '') ? '' : '?';
     const url = `/api/v1/explore${seperator}${queryString}&view=${state.resultsView}`;
+
     fetchData(url)
       .then( resp => {
         //console.log(resp);

@@ -1,4 +1,5 @@
 from sqlalchemy import (
+    Table,
     Column,
     Integer,
     Numeric,
@@ -24,6 +25,13 @@ from app.database import (
     TimestampMixin,
 )
 
+organization_collection = Table(
+    'organization_collection',
+    Base.metadata,
+    Column('organization_id', ForeignKey('organization.id')),
+    Column('collection_id', ForeignKey('collection.id')),
+)
+
 class User(Base, UserMixin, TimestampMixin):
     __tablename__ = 'user'
 
@@ -32,6 +40,17 @@ class User(Base, UserMixin, TimestampMixin):
     passwd = Column(String(500))
     status = Column(String(1), default='P')
     organization_id = Column(Integer, ForeignKey('organization.id', ondelete='SET NULL'), nullable=True)
+    #default_collection_id = Column(Integer, ForeignKey('collection.id', on
+    organization = relationship('Organization')
+    favorites = relationship('Favorite', primaryjoin='User.id == Favorite.user_id')
+
+
+class Favorite(Base):
+    __tablename__ = 'favorite'
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
+    record = Column(String(500))
 
 
 class Organization(Base, TimestampMixin):
@@ -39,8 +58,12 @@ class Organization(Base, TimestampMixin):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(500))
-    abbreviation = Column(String(500))
+    short_name = Column(String(500))
+    code = Column(String(500))
     related_link_categories = relationship('RelatedLinkCategory')
+    collections = relationship('Collection', secondary=organization_collection)
+    default_collection_id = Column(Integer, ForeignKey('collection.id', ondelete='SET NULL'), nullable=True)
+    default_collection = relationship('Collection', primaryjoin='Organization.default_collection_id == Collection.id')
 
     def to_dict(self):
         return {
@@ -77,7 +100,6 @@ class Article(Base, TimestampMixin):
     # published_by = Column(String(500))
     data = Column(JSONB) # language, url, published_by
     is_markdown = Column(Boolean, default=True)
-
 
     def to_dict(self):
         return {

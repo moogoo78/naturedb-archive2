@@ -35,31 +35,31 @@
         <li class="uk-nav-header">物種</li>
         <li><a href="#" class="phok-filter-nav" data-res="taxon" data-key="taxon_name">學名或中文名</a></li>
         <li class="uk-nav-divider"></li>
-        <li><a href="#" class="phok-filter-nav" data-res="taxon.family" data-key="taxon">科名</a></li>
-        <li><a href="#" class="phok-filter-nav" data-res="taxon.genus" data-key="taxon">屬名</a></li>
-        <li><a href="#" class="phok-filter-nav" data-res="taxon.species" data-key="taxon">種名</a></li>
+        <li><a href="#" class="phok-filter-nav" data-res="taxon.family" data-key="taxon_family_name">科名</a></li>
+        <li><a href="#" class="phok-filter-nav" data-res="taxon.genus" data-key="taxon_genus_name">屬名</a></li>
+        <li><a href="#" class="phok-filter-nav" data-res="taxon.species" data-key="taxon_species_name">種名</a></li>
       </ul>
     </div>
     <div>
       <ul class="uk-nav uk-dropdown-nav">
         <li class="uk-nav-header">採集資訊</li>
-        <li><a href="#" class="phok-filter-nav" data-res="people" data-key="collector">採集者</a></li>
+        <li><a href="#" class="phok-filter-nav" data-res="people" data-key="collector_name">採集者</a></li>
         <li><a href="#" class="phok-filter-nav" data-key="field_number">採集號</a></li>
         <li class="uk-nav-divider"></li>
         <li><a href="#" class="phok-filter-nav" data-key="collect_date" data-type="date">採集日期</a></li>
-        <li><a href="#" class="phok-filter-nav" data-key="collect_date.month" date-type="date.month">採集月份</a></li>
+        <li><a href="#" class="phok-filter-nav" data-key="collect_date_month">採集月份</a></li>
       </ul>
     </div>
     <div>
       <ul class="uk-nav uk-dropdown-nav">
         <li class="uk-nav-header">採集地點</li><!-- TODO -->
-        <li><a href="#" class="phok-filter-nav" data-res="namedareas.country" data-key="namedareas">國家</a></li>
-        <li><a href="#" class="phok-filter-nav" data-res="namedareas.provinceState" data-key="namedareas">省/州</a></li>
+        <li><a href="#" class="phok-filter-nav" data-res="namedareas.country" data-key="named_areas_country">國家</a></li>
+        <li><a href="#" class="phok-filter-nav" data-res="namedareas.provinceState" data-key="namedareas_provinceState">省/州</a></li>
         <li class="uk-nav-divider"></li>
-        <li><a href="#" class="phok-filter-nav" data-res="namedareas.county" data-key="namedareas">縣/市</a></li>
-        <li><a href="#" class="phok-filter-nav" data-res="namedareas.mun.." data-key="namedareas"class="phok-filter-nav" data-res="taxon.family" data-key="taxon">鄉/鎮</a></li>
-        <li><a href="#" class="phok-filter-nav" data-res="namedareas." data-key="namedareas">國家公園</a></li>
-        <li><a href="#" class="phok-filter-nav" data-res="namedareas.locality" data-key="namedareas">地名</a></li>
+        <li><a href="#" class="phok-filter-nav" data-res="namedareas.county" data-key="named_areas_county">縣/市</a></li>
+        <li><a href="#" class="phok-filter-nav" data-res="namedareas.municipality" data-key="named_areas_municipality">鄉/鎮</a></li>
+        <li><a href="#" class="phok-filter-nav" data-res="namedareas." data-key="named_areas_national_park">國家公園</a></li>
+        <li><a href="#" class="phok-filter-nav" data-res="namedareas.locality" data-key="namedareas_locality">地名</a></li>
         <li class="uk-nav-divider"></li>
         <li><a href="#" class="phok-filter-nav" data-res="altitude" data-key="altitude" data-type="text.range">海拔</a></li>
       </ul>
@@ -67,7 +67,7 @@
     <div>
       <ul class="uk-nav uk-dropdown-nav">
         <li class="uk-nav-header">標本資訊</li>
-        <li><a href="#" class="phok-filter-nav" date-key="accession_number">館號</a></li>
+        <li><a href="#" class="phok-filter-nav" data-key="catalog_number">館號</a></li>
         <li class="uk-nav-divider"></li>
         <li><a href="#" class="phok-filter-nav" data-key="type_status" date-type="select.type_status">模式標本</a></li>
       </ul>

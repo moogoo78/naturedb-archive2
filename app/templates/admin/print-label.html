@@ -1,0 +1,181 @@
+<!doctype html>
+<html class="no-js" lang="zh-TW">
+  <head>
+    <meta charset="utf-8">
+    <title>HAST::print-label</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/print-label.css') }}"/>
+  </head>
+  <body class="A4">
+    {#
+    <div class="sheet">
+      <h1 class="page-title">page 1</h1>
+      <div class="page-item-wrapper">
+        <div class="page-item-column">
+          <div class="hast-label-item height300">aa</div>
+          <div class="hast-label-item height300">bb</div>
+          <div class="hast-label-item height300">cc</div>
+        </div>
+        <div class="page-item-column">
+          <div class="hast-label-item height300">dd</div>
+        </div>
+      </div>
+    </div>
+    #}
+    <div class="sheet">
+      <h1 class="page-title">page 1</h1>
+      <div class="page-item-wrapper">
+        <div class="page-item-column">
+          {% for record in records %}
+          <div class="hast-label-item">
+            {% for id in record.entity.identifications[1:] %}
+            <div class="id-container">
+            <div class="taxon">
+              {% if id.taxon.rank == "species" %}
+              {% set id_family = id.taxon.get_higher_taxon('family') %}
+              {% if id_family %}<span class="taxon-family">{{ id_family.display_name('label') }}</span>{% endif %}
+              <span class="taxon-species">{{ id.taxon.display_name('label') }}</span>
+              {% endif %}
+            </div>
+            <div class="left-right">
+              <span>Det. by {{ id.identifier.display_name('label') }}</span>
+              <span>{% if id.date %}{{ id.date.strftime('%b. %d, %Y') }}{% endif %}</span>
+            </div>
+          </div>
+          {% endfor %}
+          {% set named_areas = record.entity.get_sorted_named_area_list() %}
+          <div class="institution">
+            <!-- LAYOUT1 span class="institution-name">中央研究院植物標本館</span><span class="institution-code">(HAST)</span-->
+            <span class="collection-name">{% if record.entity.get_named_area('country') %}{{ record.entity.get_named_area('country').source_data.countryE }}{% endif %}</span>{# TODO #}
+          </div>
+          <div class="taxon">
+            {% set first_id_taxon = record.entity.get_first_id_taxon() %}
+            {% if first_id_taxon %}
+            <span class="taxon-family">{{ first_id_taxon.get_higher_taxon('family').display_name('label') }}</span>
+            <span class="taxon-species">{{ first_id_taxon.display_name('label') }}</span>
+            {% endif %}
+        </div>
+
+        <div class="locality">
+          {# if taiwan: show from hsien, else other country, show from province (ex: china) #}
+          <span class="locality-list">{{ named_areas[1:]|map(attribute='display_name')|join(', ')|replace('TAIWAN (台灣), ', '', 1) }}</span>{# TODO #}
+          {% if record.entity.locality_text %}<span class="box">{{ record.entity.locality_text }}</span>{% endif %}
+        </div>
+        <div class="geographic-position">
+          {% set coordinates = record.entity.get_coordinates('dms') %}
+          {% if coordinates %}<span>{{ coordinates.x_label }}, {{ coordinates.y_label }}</span>{% endif %}
+          {% if record.entity.altitude  %}<span class="altitude">Elev. ca. {{ record.entity.altitude }}{% if record.entity.altitude2 %}-{{ record.entity.altitude2 }}{% endif %} m<span>{% endif %}
+        </div>
+        {# TODO
+        <div class="annotation-container">
+          {% for _, text in record.annotation_list.items() %}
+          <div class="annotations">{{ text }}</div>
+          {% endfor %}
+          {% if field_note_list or annotation_list %}<div class="annotations">{{ field_note_list|reject('none')|join(', ') }}{{ annotation_list|rejectattr('text', 'none')|map(attribute='text')|join(', ') }}</div>{% endif %}
+        </div>
+        #}
+        <div class="collect">
+          <span class="collect-num">{{ record.entity.collector.display_name() }} {{ record.entity.field_number }}{% if record.entity.companion_list %}<span class="box companion">& {{ record.entity.companion_list|join(', ') }}</span>{% endif %}</span>
+          <span class="collect-date">{% if record.entity.collect_date %}{{ record.entity.collect_date.strftime('%b. %d, %Y') }}{% endif %}</span>
+        </div>
+        <!-- LAYOUT1 div class="footer">HERBARIUM, ACADEMIA SINICA, TAIPEI (HAST)</div-->
+        <div class="institution"><span class="institution-name">中央研究院植物標本館</span><span class="institution-code">Herbarium, Academia Sinica, Taipei (HAST)</span></div>
+        <div class="annotations">
+          {# TODO
+          {% if record.unit and record.unit.get_annotations(['is-greenhouse'])[0] and record.unit.get_annotations(['is-greenhouse'])[0].text == "G" %}<span class="box">Plants of this collection were brought back for cultivation.</span>{% endif %}
+          {% if record.unit and record.unit.preparation_date %}<span class="box">This specimen was pressed on {{ record.unit.preparation_date.strftime('%b. %d, %Y') }}</span>{% endif %}
+          #}
+        </div>
+
+        </div>
+          {% endfor %}
+        </div><!-- end page-item-column -->
+        <div class="page-item-column column-1-2"></div>
+      </div><!-- end page-item-wrapper -->
+    </div><!-- end sheet -->
+    <script>
+      (function() {
+        'use strict';
+        const bodyElement = document.getElementsByClassName('A4')[0];
+        //const items = document.getElementsByClassName('hast-label-item');
+        // return nodeList, if  getElementsByClassName will return HTMLCollection, automatically change DOM, cause "move to" side effect bug
+        const items = document.querySelectorAll('.hast-label-item');
+
+        //console.log(items);
+        const heightLimit = 1123;
+        let sheetCount = 1;
+        let heightCount = 12; // h1 height
+        const buffer = [];
+        const columns = []
+        let itemRanges = [];
+
+        const createSheet = (page) => {
+          console.log('create page', page);
+          const newSheet = document.createElement('div')
+          const newPageTitle = document.createElement('h1');
+          const newPageItemWrapper = document.createElement('div');
+          const newPageItemColumnLeft = document.createElement('div');
+          const newPageItemColumnRight = document.createElement('div');
+          newSheet.classList.add('sheet');
+          newPageTitle.classList.add('page-title');
+          newPageTitle.innerHTML = `page ${page}`;
+          newPageItemWrapper.classList.add('page-item-wrapper');
+          newPageItemColumnLeft.classList.add('page-item-column', `column-${page}-1`);
+          newPageItemColumnRight.classList.add('page-item-column', `column-${page}-2`);
+          newSheet.appendChild(newPageTitle);
+          newSheet.appendChild(newPageItemWrapper);
+          newPageItemWrapper.appendChild(newPageItemColumnLeft);
+          newPageItemWrapper.appendChild(newPageItemColumnRight);
+          bodyElement.appendChild(newSheet);
+        }
+
+        for (let i=0; i<items.length;i++) {
+          itemRanges.push(i);
+          heightCount += items[i].offsetHeight + 20; // margin: 10px
+          const nextHeight = (i < items.length -1) ? items[i+1].offsetHeight + 20 : 0;
+          //console.log(i, items[i].offsetHeight, nextHeight, heightCount);
+          if (heightCount + nextHeight >= heightLimit) { // A4 height px in 96 PPI
+            columns.push(itemRanges);
+            heightCount = 0;
+            itemRanges = [];
+
+            console.log(items.length, columns.length, i);
+            if (i >= 2 && i % 2 === 0) {
+              sheetCount++;
+              createSheet( (columns.length+1)/2+1);
+            }
+          }
+        }
+        // last
+        if (itemRanges.length > 0) {
+          columns.push(itemRanges);
+        }
+        console.log(columns);
+
+        if (columns.length > 2) {
+          const firstContainer = document.getElementsByClassName('column-1-2')[0];
+          const itemsToMove = columns[1].map((x)=>{
+            firstContainer.appendChild(items[x])
+            return items[x]
+          });
+
+          // start move after 2 columns
+          for (let i=2; i < columns.length; i++) {
+            //if (i % 2 === 0) {
+            const page = parseInt(i/2) + 1;
+            const columnIndex = (i%2 === 0) ? '1' : '2';
+            const container = document.getElementsByClassName(`column-${page}-${columnIndex}`)[0];
+            const itemsToMove = columns[i].map((x)=>{
+              //console.log(items[x]);
+              container.appendChild(items[x])
+              return items[x]
+            });
+            //console.log(itemsToMove);
+          }
+        } else {
+          console.log('no need to move');
+        }
+      })();
+     </script>
+  </body>
+</html>

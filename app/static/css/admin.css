@@ -10,3 +10,7 @@
 .phok-token {
   border: 2px dashed #EEEEEE;
 }
+
+#my-collection-filter li a {
+  border-radius: 3px; 
+}

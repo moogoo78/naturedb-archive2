@@ -11,6 +11,7 @@ from flask import (
 from sqlalchemy import (
     desc,
     func,
+    select,
 )
 
 from app.database import session
@@ -32,10 +33,17 @@ from app.models.site import (
 )
 from app.models.collection import (
     Unit,
+    Person,
+    Collection,
 )
+from app.models.taxon import (
+    Taxon,
+)
+
 from app.helpers import (
     conv_hast21,
     get_record,
+    import_checklist,
 )
 
 main = Blueprint('main', __name__)
@@ -196,6 +204,7 @@ def get_measurement_or_fact_option_list():
 
 @main.route('/foo')
 def foo():
+    import_checklist()
     return jsonify({})
 
 def find_coel():
@@ -299,7 +308,14 @@ def bego():
 @main.route('/')
 def index():
     articles = [x.to_dict() for x in Article.query.order_by(Article.publish_date.desc()).limit(10).all()]
-    units = Unit.query.filter(Unit.accession_number!='').order_by(func.random()).limit(4).all()
+    #units = Unit.query.filter(Unit.accession_number!='').order_by(func.random()).limit(4).all()
+    units = []
+    stmt = select(Unit.id).where(Unit.catalog_number!='').order_by(func.random()).limit(4)
+    results = session.execute(stmt)
+    for i in results.all():
+        u = session.get(Unit, int(i[0]))
+        units.append(u)
+
     return render_template('index.html', articles=articles, units=units)
 
 @main.route('/data')
@@ -319,14 +335,6 @@ def specimen_detail(record_id):
     if item := Unit.query.filter(Unit.accession_number==ids[1]).first():
         return render_template('specimen-detail.html', item=item)
 
-@main.route('/print-label')
-def print_label():
-    keys = request.args.get('keys', '')
-    #query = Collection.query.join(Person).filter(Collection.id.in_(ids.split(','))).order_by(Person.full_name, Collection.field_number)#.all()
-    key_list = keys.split(',')
-    records = [get_record(key) for key in key_list]
-
-    return render_template('print-label.html', records=records)
 
 @main.route('/specimen-image/<org_and_accession_number>')
 def specimen_image(org_and_accession_number):

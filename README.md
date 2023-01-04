@@ -13,8 +13,22 @@ postgres: create database naturedb;
 flask:
 $ flask migrate
 ```
+collection & organization migrate failed,
+commented collection_organization and migarte later
 
+insert default collection, organization, by hand
 
+import hast21
+- person
+- proj
+- geo
+insert assertion_type
+- assertion_type_option
+
+change 
+- other-csv
+- img
+- name-comment
 ## workflow
 
 create db (naturedb) use adminer web ui

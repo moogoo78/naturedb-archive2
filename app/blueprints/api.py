@@ -34,12 +34,17 @@ from app.models.collection import (
     Unit,
     Identification,
     Person,
+    AssertionTypeOption,
+    Collection,
     #LogEntry,
     #get_structed_list,
 )
 from app.models.taxon import (
     Taxon,
     TaxonRelation,
+)
+from app.models.site import (
+    Favorite,
 )
 
 api = Blueprint('api', __name__)
@@ -59,7 +64,7 @@ def make_query_response(query):
     }
     return result
 
-def entity_filter(stmt, payload):
+def record_filter(stmt, payload):
     filtr = payload['filter']
 
     if catalog_number := filtr.get('catalog_number'):
@@ -173,6 +178,64 @@ def entity_filter(stmt, payload):
 
     if value := filtr.get('type_status'):
         stmt = stmt.where(Unit.type_status==value)
+    if q := filtr.get('q'):
+        term, value = q.split(':')
+        if term == 'taxon_name':
+            stmt = stmt.where(Entity.proxy_taxon_scientific_name.ilike(f'%{value}%') | Entity.proxy_taxon_common_name.ilike(f'%{value}%'))
+        elif term in ['taxon_family_name', 'taxon_genus_name', 'taxon_species_name']:
+            rank = term.split('_')[1]
+            stmt_taxa = select(Taxon).where(Taxon.rank==rank).where(Taxon.full_scientific_name.ilike(f'%{value}%') | Taxon.common_name.ilike(f'%{value}%'))
+            result = session.execute(stmt_taxa)
+            ids = []
+            for t in result.all():
+                ids += [t[0].id] + [x.id for x in t[0].get_children()]
+
+            if len(ids):
+                stmt = stmt.where(Entity.proxy_taxon_id.in_(ids))
+            else:
+                stmt = stmt.where(False)
+        elif term == 'collector_name':
+            stmt_p = select(Person.id).where(Person.full_name.ilike(f'%{value}%') | Person.full_name_en.ilike(f'%{value}%'))
+            result = session.execute(stmt_p)
+            ids = []
+            for p in result.all():
+                ids.append(p[0])
+            if len(ids):
+                stmt = stmt.where(Entity.collector_id.in_(ids))
+            else:
+                stmt = stmt.where(False)
+        elif term == 'field_number':
+            stmt = stmt.where(Entity.field_number.ilike(f'%{value}%'))
+        elif term == 'collect_date':
+            stmt = stmt.where(Entity.collect_date==value)
+        elif term == 'collect_date_month':
+            stmt = stmt.where(extract('month', Entity.collect_date) == value)
+        elif term == 'collect_date_month':
+            stmt = stmt.where(extract('month', Entity.collect_date) == value)
+        elif 'named_areas_' in term:
+            na_list = term.split('_')
+            na_name = '_'.join(na_list[2:])
+            if ac := AreaClass.query.filter(AreaClass.name==na_name).first():
+                stmt_na = select(NamedArea.id).where(NamedArea.name.ilike(f'%{value}%') | NamedArea.name_en.ilike(f'%{value}%')).where(NamedArea.area_class==ac)
+                result = session.execute(stmt_na)
+                many_or = or_()
+                ids = [x[0] for x in result.all()]
+                if len(ids):
+                    for id_ in ids:
+                        many_or = or_(many_or, Entity.named_areas.any(id=id_))
+                        stmt = stmt.where(many_or)
+                else:
+                    stmt = stmt.where(False)
+
+        elif term == 'altitude':
+            if '-' in value:
+                alt_range = value.split('-')
+                stmt = stmt.where(Entity.altitude >= alt_range[0], Entity.altitude2 <= alt_range[1] )
+            else:
+                stmt = stmt.where(Entity.altitude == value)
+        elif term == 'catalog_number':
+            stmt = stmt.where(Unit.catalog_number.ilike(f'%{value}%'))
+
 
     return stmt
 
@@ -246,7 +309,7 @@ def get_searchbar():
             item['meta'] = {
                 'term': 'field_number_with_collector',
                 'label': '採集號',
-                'display': '{} {}'.format(r.collector.display_name() if r.collector else '', r.field_number),
+                'display': '{} {}'.format(r.collector.display_name if r.collector else '', r.field_number),
                 'seperate': {
                     'field_number': {
                         'term': 'field_number',
@@ -333,7 +396,7 @@ def get_explore():
     }
     # query_key_map = {}
     # print(payload, flush=True)
-    stmt = entity_filter(stmt, payload)
+    stmt = record_filter(stmt, payload)
     # logging.debug(stmt)
 
     base_stmt = stmt
@@ -533,7 +596,7 @@ def collection():
             'range': json.loads(request.args.get('range')) if request.args.get('range') else [0, 20],
         }
 
-        base_stmt = entity_filter(stmt, payload)
+        base_stmt = record_filter(stmt, payload)
 
         # =======
         # results
@@ -631,13 +694,14 @@ def collection():
         return allow_cors(collection.to_dict())
 
 @api.route('/people/<int:id>', methods=['GET'])
-def get_people_detail(id):
+def get_person_detail(id):
     obj = session.get(Person, id)
     return jsonify(obj.to_dict(with_meta=True))
 
 @api.route('/people', methods=['GET'])
-def get_people_list():
-    query = Person.query
+def get_person_list():
+    query = Person.query.select_from(Collection).join(Collection.people)
+
     if filter_str := request.args.get('filter', ''):
         filter_dict = json.loads(filter_str)
         collector_id = None
@@ -653,6 +717,8 @@ def get_people_list():
             collector_id = x
         if x := filter_dict.get('id', ''):
             query = query.filter(Person.id.in_(x))
+        if collection_id := filter_dict.get('collection_id', ''):
+            query = query.filter(Collection.id==collection_id)
 
     return jsonify(make_query_response(query))
 
@@ -662,6 +728,83 @@ def get_taxa(id):
     return jsonify(obj.to_dict(with_meta=True))
 
 @api.route('/named_areas/<int:id>', methods=['GET'])
-def get_named_areas(id):
+def get_named_area_detail(id):
     obj = session.get(NamedArea, id)
     return jsonify(obj.to_dict(with_meta=True))
+
+@api.route('/named_areas', methods=['GET'])
+def get_named_area_list():
+    query = NamedArea.query
+
+    if filter_str := request.args.get('filter', ''):
+        filter_dict = json.loads(filter_str)
+        if keyword := filter_dict.get('q', ''):
+            like_key = f'{keyword}%' if len(keyword) == 1 else f'%{keyword}%'
+            query = query.filter(NamedArea.name.ilike(like_key) | NamedArea.name_en.ilike(like_key))
+        if ids := filter_dict.get('id', ''):
+            query = query.filter(NamedArea.id.in_(ids))
+        if area_class_id := filter_dict.get('area_class_id', ''):
+            query = query.filter(NamedArea.area_class_id==area_class_id)
+        if parent_id := filter_dict.get('parent_id'):
+            query = query.filter(NamedArea.parent_id==parent_id)
+
+    return jsonify(make_query_response(query))
+
+@api.route('/assertion_type_options', methods=['GET'])
+def get_assertion_type_option_list():
+    query = AssertionTypeOption.query
+
+    if filter_str := request.args.get('filter', ''):
+        filter_dict = json.loads(filter_str)
+        if keyword := filter_dict.get('q', ''):
+            like_key = f'{keyword}%' if len(keyword) == 1 else f'%{keyword}%'
+            query = query.filter(AssertionTypeOption.value.ilike(like_key))
+        #if ids := filter_dict.get('id', ''):
+        #    query = query.filter(AssertionTypeOption.id.in_(ids))
+        if type_id := filter_dict.get('type_id', ''):
+            query = query.filter(AssertionTypeOption.assertion_type_id==type_id)
+
+    return jsonify(make_query_response(query))
+
+@api.route('/taxa', methods=['GET'])
+def get_taxon_list():
+    query = Taxon.query
+    if filter_str := request.args.get('filter', ''):
+        filter_dict = json.loads(filter_str)
+        if keyword := filter_dict.get('q', ''):
+            like_key = f'{keyword}%' if len(keyword) == 1 else f'%{keyword}%'
+            query = query.filter(Taxon.full_scientific_name.ilike(like_key) | Taxon.common_name.ilike(like_key))
+        if ids := filter_dict.get('id', ''):
+            query = query.filter(Taxon.id.in_(ids))
+        if rank := filter_dict.get('rank'):
+            query = query.filter(Taxon.rank==rank)
+        if pid := filter_dict.get('parent_id'):
+            if parent := session.get(Taxon, pid):
+                depth = Taxon.RANK_HIERARCHY.index(parent.rank)
+                taxa_ids = [x.id for x in parent.get_children(depth)]
+                query = query.filter(Taxon.id.in_(taxa_ids))
+
+    return jsonify(make_query_response(query))
+
+
+@api.route('/favorites', methods=['GET', 'POST'])
+def favorite():
+    if request.method == 'GET':
+        pass
+    elif request.method == 'POST':
+        data = request.json
+        action = ''
+        if fav := Favorite.query.filter(Favorite.user_id == data['uid'], Favorite.record == data['record']).scalar():
+            action = 'remove'
+            session.delete(fav)
+            session.commit()
+        else:
+            fav = Favorite(user_id=data['uid'], record=data['record'])
+            session.add(fav)
+            action = 'add'
+
+        session.commit()
+
+        return jsonify({'action': action, 'record': data['record']})
+
+    return abort(404)

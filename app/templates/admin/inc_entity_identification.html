@@ -1,12 +1,20 @@
-<div class="uk-grid-small uk-form-stacked" uk-grid>
-  {% for i in entity.identifications %}
-  <div class="uk-card uk-card-default uk-card-body uk-width-1-1@s">
+
+<div><a id="create-identification" href="#" class="uk-button uk-button-primary uk-button-small">新增鑑定</a></div>
+<div id="identification-template" hidden>
+  <div class="uk-card uk-card-default uk-card-body uk-width-1-1@s" id="identifications__NEW__wrapper">
+    <div class="uk-card-badge uk-label">__NEW__</div>
     <div class="uk-grid-small uk-form-stacked" uk-grid>
       <div class="uk-width-5-6@s">
         <div class="uk-margin">
           <label class="uk-form-label">學名</label>
           <div class="uk-form-controls">
-            <input class="uk-input" type="text" name="" value="" />
+            <div class="uk-inline uk-width-1-1">
+              <span class="uk-form-icon uk-form-icon-flip" uk-icon="icon: triangle-down"></span>
+              {% call entity_macro.my_listbox('identifications__NEW__taxon') -%}
+              url-prefix: /api/v1/taxa; item-display: display_name; dropdown-class:uk-width-2-3,uk-margin-remove
+              {%- endcall %}
+              {#<input id="identifications__NEW__taxon-input" class="uk-input" type="text" placeholder="" name="identifications__NEW__taxon" autocapitalize="none" autocorrect="off" autocomplete="off" my-listbox="url-prefix: /api/v1/taxa; item-display: display_name; dropdown-class:uk-width-2-3,uk-margin-remove" />#}
+            </div>
           </div>
         </div>
       </div>
@@ -14,7 +22,7 @@
         <div class="uk-margin">
           <label class="uk-form-label">編號</label>
           <div class="uk-form-controls">
-            <input class="uk-input" type="text" name="identifications[i].sequence" value="{{ i.sequence }}" />
+            <input class="uk-input" type="text" name="identifications__NEW__sequence" value="" />
           </div>
         </div>
       </div>
@@ -22,7 +30,10 @@
         <div class="uk-margin">
           <label class="uk-form-label">鑑定者</label>
           <div class="uk-form-controls">
-            <input class="uk-input" type="text" name="" value="" />
+            <div class="uk-inline uk-width-1-1">
+              <span class="uk-form-icon uk-form-icon-flip" uk-icon="icon: triangle-down"></input>
+              <span id="identifications__NEW__identifier-input" class="uk-input" type="text" placeholder="" name="identifications__NEW__identifier" autocapitalize="none" autocorrect="off" autocomplete="off" my-listbox="url-prefix: /api/v1/people; item-display: display_name; append-query: is_identifier=1;" />
+            </div>
           </div>
         </div>
       </div>
@@ -30,11 +41,65 @@
         <div class="uk-margin">
           <label class="uk-form-label">鑑定日期</label>
           <div class="uk-form-controls">
-            <input class="uk-input" type="date" name="" value="" />
+            <input class="uk-input" type="date" name="identifications__NEW__date" value="" />
           </div>
         </div>
       </div>
     </div>
+    <div class="uk-margin-top">
+      <a href="#" class="uk-button uk-button-danger uk-button-small">刪除</a>
+    </div>
+  </div>
+</div>
+
+<div class="uk-grid-small uk-form-stacked" id="identification-container" uk-grid>
+  {% for i in entity.identifications %}
+  {% set id_key = "identifications__" + i.id|string + "__" %}
+  <div class="uk-card uk-card-default uk-card-body uk-width-1-1@s">
+    <div class="uk-card-badge uk-label">{{ loop.index }}</div>
+    <div class="uk-grid-small uk-form-stacked" uk-grid>
+      <div class="uk-width-5-6@s">
+        <div class="uk-margin">
+          <label class="uk-form-label">學名</label>
+          <div class="uk-form-controls">
+            <div class="uk-inline uk-width-1-1">
+              <span class="uk-form-icon uk-form-icon-flip" uk-icon="icon: triangle-down"></span>
+              <input id="{{ id_key }}taxon-input" class="uk-input" type="text" placeholder="" name="{{ id_key }}taxon" autocapitalize="none" autocorrect="off" autocomplete="off" my-listbox="url-prefix: /api/v1/taxa; item-display: display_name; dropdown-class:uk-width-2-3,uk-margin-remove" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="uk-width-1-6@s">
+        <div class="uk-margin">
+          <label class="uk-form-label">編號</label>
+          <div class="uk-form-controls">
+            <input class="uk-input" type="text" name="{{ id_key }}sequence" value="{{ i.sequence }}" />
+          </div>
+        </div>
+      </div>
+      <div class="uk-width-1-2@s">
+        <div class="uk-margin">
+          <label class="uk-form-label">鑑定者</label>
+          <div class="uk-form-controls">
+            <div class="uk-inline uk-width-1-1">
+              <span class="uk-form-icon uk-form-icon-flip" uk-icon="icon: triangle-down"></span>
+              <input id="{{ id_key }}identifier-input" class="uk-input" type="text" placeholder="" name="{{ id_key }}identifier" autocapitalize="none" autocorrect="off" autocomplete="off" my-listbox="url-prefix: /api/v1/people; item-display: display_name; append-query: is_identifier=1;" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="uk-width-1-2@s">
+        <div class="uk-margin">
+          <label class="uk-form-label">鑑定日期</label>
+          <div class="uk-form-controls">
+            <input class="uk-input" type="date" name="{{ id_key }}date" value="{% if i.date %}{{ i.date.strftime('%Y-%m-%d') }}{% endif %}" />
+          </div>
+        </div>
+      </div>
+    </div>
+      <div class="uk-margin-top">
+        <a href="#" class="uk-button uk-button-danger uk-button-small">刪除</a>
+      </div>
   </div>
   {% endfor %}
 </div>

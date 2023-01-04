@@ -45,6 +45,12 @@ def get_structed_list(options, value_dict={}):
         })
     return res
 
+collection_person_map = Table(
+    'collection_person_map',
+    Base.metadata,
+    Column('collection_id', ForeignKey('collection.id'), primary_key=True),
+    Column('person_id', ForeignKey('person.id'), primary_key=True)
+)
 
 class Collection(Base, TimestampMixin):
     __tablename__ = 'collection'
@@ -53,6 +59,8 @@ class Collection(Base, TimestampMixin):
     name = Column(String(500), unique=True)
     label = Column(String(500))
     organization_id = Column(Integer, ForeignKey('organization.id', ondelete='SET NULL'), nullable=True)
+    people = relationship('Person', secondary=collection_person_map, back_populates='collections')
+    area_classes = relationship('AreaClass')
 
 entity_named_area_map = Table(
     'entity_named_area_map',
@@ -77,8 +85,6 @@ class Entity(Base, TimestampMixin):
 
     #biotope = Column(String(500))
     #biotope_measurement_or_facts = relationship('MeasurementOrFact')
-    # assertions = relationship('EntityAssertion', secondary=entity_assertion_map, backref='entities')
-    assertions = relationship('EntityAssertion')
     # sex = Column(String(500))
     # age = Column(String(500))
 
@@ -86,9 +92,6 @@ class Entity(Base, TimestampMixin):
     verbatim_locality = Column(String(1000))
     locality_text = Column(String(1000))
     locality_text_en = Column(String(1000))
-
-    #named_area_relations = relationship('CollectionNamedArea')
-    named_areas = relationship('NamedArea', secondary=entity_named_area_map, backref='entities')
 
     altitude = Column(Integer)
     altitude2 = Column(Integer)
@@ -113,12 +116,17 @@ class Entity(Base, TimestampMixin):
     source_data = Column(JSONB)
 
     # proxy_units = Column(JSONB)
-    units = relationship('Unit')
 
     collection_id = Column(Integer, ForeignKey('collection.id'))
     project_id = Column(Integer, ForeignKey('project.id'))
-    project = relationship('Project')
 
+    #named_area_relations = relationship('CollectionNamedArea')
+    named_areas = relationship('NamedArea', secondary=entity_named_area_map, backref='entities')
+    assertions = relationship('EntityAssertion')
+    # assertions = relationship('EntityAssertion', secondary=entity_assertion_map, backref='entities')
+    project = relationship('Project')
+    collection = relationship('Collection')
+    units = relationship('Unit')
     '''
     @validates('altitude')
     def validate_altitude(self, key, value):
@@ -139,6 +147,24 @@ class Entity(Base, TimestampMixin):
         return value_int
     '''
 
+    def get_sorted_named_area_list(self):
+        return sorted(self.named_areas, key=lambda x: x.area_class.sort)
+
+    def get_assertion(self, type_name='', part=''):
+        if type_name:
+            for x in self.assertions:
+                if x.assertion_type.name == type_name:
+                    return getattr(x, part) if part else x
+
+        return ''
+
+    def get_named_area(self, area_class_name=''):
+        if area_class_name:
+            for na in self.named_areas:
+                if na.area_class.name == area_class_name:
+                    return na
+        return ''
+
     @property
     def key(self):
         unit_keys = [x.key for x in self.units]
@@ -146,18 +172,6 @@ class Entity(Base, TimestampMixin):
             return ','.join(unit_keys)
         else:
             return '--'
-
-    def get_parameters(self, parameter_list=[]):
-        params = {f'{x.parameter.name}': x for x in self.biotope_measurement_or_facts}
-        items = []
-        if len(parameter_list) == 0:
-            parameter_list = [x for x in params]
-        for name in parameter_list:
-            if p := params.get(name, ''):
-                item = p.to_dict()
-                item['name'] = name
-                items.append(item)
-        return items
 
     @property
     def latest_scientific_name(self):
@@ -372,24 +386,13 @@ class Entity(Base, TimestampMixin):
         else:
             return None
 
-    def get_named_area_map(self):
+    #def get_named_area_map(self):
         #named_area_map = {f'{x.named_area.area_class.name}': x.named_area.to_dict() for x in self.named_area_relations}
-        named_area_map = {f'{x.area_class.name}': x.to_dict() for x in self.named_areas}
-        return get_structed_map(AreaClass.DEFAULT_OPTIONS, named_area_map)
+    #    named_area_map = {f'{x.area_class.name}': x.to_dict() for x in self.named_areas}
+    #    return get_structed_map(AreaClass.DEFAULT_OPTIONS, named_area_map)
 
-    def get_named_area_list(self):
-        named_area_map = {f'{x.area_class.name}': x.to_dict() for x in self.named_areas}
-        return get_structed_list(AreaClass.DEFAULT_OPTIONS, named_area_map)
-
-    def get_assertion_list(self):
-        at_list = AssertionType.query.filter(AssertionType.collection_id==self.collection_id, AssertionType.target=='entity').order_by('sort').all()
-        return at_list
-
-    def get_biotope_list_DEPRECATED(self):
-        biotope_map = {f'{x.parameter.name}': x.to_dict() for x in self.biotope_measurement_or_facts}
-        biotopes = get_structed_list(MeasurementOrFact.BIOTOPE_OPTIONS, biotope_map)
-        return biotopes
-
+    #def get_named_area_list(self): #TODO
+    #    return []
     def get_form_layout(self):
         named_areas = []
         for x in AreaClass.DEFAULT_OPTIONS:
@@ -438,7 +441,7 @@ class Entity(Base, TimestampMixin):
         }
 
     def get_first_id_taxon(self):
-        if len(self.identifications.all()) > 0:
+        if len(self.identifications) > 0:
             return self.identifications[0].taxon
         else:
             return None
@@ -483,7 +486,7 @@ class Identification(Base, TimestampMixin):
 
     def __repr__(self):
         if self.taxon:
-            return '<Identification id="{}" taxon="{}">'.format(self.id, self.taxon.display_name())
+            return '<Identification id="{}" taxon="{}">'.format(self.id, self.taxon.display_name)
         return '<Identification id="{}">'.format(self.id)
 
     @validates('date')
@@ -506,7 +509,7 @@ class Identification(Base, TimestampMixin):
             'sequence': self.sequence or '',
         }
         if self.taxon:
-            data['taxon'] =  {'id': self.taxon_id, 'text': self.taxon.display_name()}
+            data['taxon'] =  {'id': self.taxon_id, 'text': self.taxon.display_name}
         if self.identifier:
             data['identifier'] = self.identifier.to_dict()
 
@@ -579,6 +582,7 @@ class Unit(Base, TimestampMixin):
     specimen_marks = relationship('SpecimenMark')
     collection = relationship('Collection')
     entity = relationship('Entity', overlaps='units') # TODO warning
+    assertions = relationship('UnitAssertion')
     transactions = relationship('Transaction')
     # abcd: Disposition (in collection/missing...)
 
@@ -660,8 +664,8 @@ class Unit(Base, TimestampMixin):
         mofs = get_structed_list(MeasurementOrFact.UNIT_OPTIONS, mof_map)
         return mofs
 
-    def get_assertion_list(self):
-        at_list = AssertionType.query.filter(AssertionType.collection_id==self.entity.collection_id, AssertionType.target=='unit').order_by('sort').all()
+    def get_assertion_type_list(self):
+        at_list = AssertionType.query.filter(AssertionType.target=='unit').order_by('sort').all() # TODO collection
         return at_list
 
     def get_annotations(self, parameter_list=[]):
@@ -676,11 +680,11 @@ class Unit(Base, TimestampMixin):
         return rows
 
     def get_image(self, thumbnail='_s'):
-        if self.accession_number:
+        if self.catalog_number:
             try:
                 # TODO: int error exception
-                accession_number_int = int(self.accession_number)
-                instance_id = f'{accession_number_int:06}'
+                catalog_number_int = int(self.catalog_number)
+                instance_id = f'{catalog_number_int:06}'
                 first_3 = instance_id[0:3]
                 img_url = f'http://brmas-pub.s3-ap-northeast-1.amazonaws.com/hast/{first_3}/S_{instance_id}{thumbnail}.jpg'
                 return img_url
@@ -689,14 +693,25 @@ class Unit(Base, TimestampMixin):
         else:
             return ''
 
+    def get_assertions(self, type_name=''):
+        result = {}
+        for i in self.assertions:
+            result[i.assertion_type.name] = {
+                'type_id': i.assertion_type_id,
+                'type_name': i.assertion_type.name,
+                'type_label': i.assertion_type.label,
+                'value': i.value
+            }
+        return result
+
     def __str__(self):
         collector = ''
-        if p := self.collection.collector:
-            collector = p.display_name()
+        if p := self.entity.collector:
+            collector = p.display_name
 
-        record_number = f'{collector} | {self.collection.field_number}::{self.duplication_number}'
+        record_number = f'{collector} | {self.entity.field_number}::{self.duplication_number}'
         taxon = '--'
-        return f'<Unit #{self.id} {record_number} | {self.collection.latest_scientific_name}>'
+        return f'<Unit #{self.id} {record_number} | {self.entity.proxy_taxon_scientific_name}>'
 
 
 class Person(Base, TimestampMixin):
@@ -713,14 +728,16 @@ class Person(Base, TimestampMixin):
     sorting_name = Column(JSONB)
     abbreviated_name = Column(String(500))
     preferred_name = Column(String(500))
+    organization_name = Column(String(500))
     is_collector = Column(Boolean, default=False)
     is_identifier = Column(Boolean, default=False)
     source_data = Column(JSONB)
-    organization_id = Column(Integer, ForeignKey('organization.id', ondelete='SET NULL'), nullable=True)
-    organization = Column(String(500))
+    #organization_id = Column(Integer, ForeignKey('organization.id', ondelete='SET NULL'), nullable=True)
+    #organization = Column(String(500))
+    collections = relationship('Collection', secondary=collection_person_map, back_populates='people')
 
     def __repr__(self):
-        return '<Person(id="{}", display_name="{}")>'.format(self.id, self.display_name())
+        return '<Person(id="{}", display_name="{}")>'.format(self.id, self.display_name)
 
     @property
     def english_name(self):
@@ -729,7 +746,9 @@ class Person(Base, TimestampMixin):
                 return '{} {}'.format(en_name['inherited_name'], en_name['given_name'])
         return ''
 
-    def display_name(self, type_=None):
+    @property
+    def display_name(self):
+        # todo
         name = ''
         if name := self.english_name:
             if fname := self.full_name:
@@ -737,15 +756,12 @@ class Person(Base, TimestampMixin):
         elif self.full_name:
             name =  self.full_name
 
-        if type_ == 'label':
-            return name
-
         return name or ''
 
     def to_dict(self, with_meta=False):
         data = {
             'id': self.id,
-            'display_name': self.display_name(),
+            'display_name': self.display_name,
             'full_name': self.full_name,
             #'atomized_name': self.atomized_name,
             #'full_name_en': self.full_name_en,
@@ -760,7 +776,7 @@ class Person(Base, TimestampMixin):
             data['meta'] = {
                 'term': 'collector', # TODO
                 'label': '採集者',
-                'display': self.display_name(),
+                'display': self.display_name,
             }
         return data
 
@@ -799,7 +815,8 @@ class Project(Base, TimestampMixin):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(500))
-    organization_id = Column(Integer, ForeignKey('organization.id', ondelete='SET NULL'), nullable=True)
+    # organization_id = Column(Integer, ForeignKey('organization.id', ondelete='SET NULL'), nullable=True)
+    collection_id = Column(Integer, ForeignKey('collection.id', ondelete='SET NULL'), nullable=True)
 
     def to_dict(self):
         return {
@@ -848,7 +865,7 @@ class EntityPerson(Base):
 
 # Entity Assertion
 class AssertionMixin:
-    value = Column(String(500))
+    value = Column(String(1000))
 
     @declared_attr
     def assertion_type_id(self):
@@ -869,7 +886,9 @@ class AssertionType(Base, TimestampMixin):
     target = Column(String(50)) # assertionTargetType
     sort = Column(Integer)
     data = Column(JSONB) # group
+    input_type = Column(String(50))
     collection_id = Column(Integer, ForeignKey('collection.id', ondelete='SET NULL'), nullable=True)
+    collection = relationship('Collection')
 
 class AssertionTypeOption(Base, TimestampMixin):
     __tablename__ = 'assertion_type_option'
@@ -880,6 +899,15 @@ class AssertionTypeOption(Base, TimestampMixin):
     data = Column(JSONB) # source_data
     assertion_type_id = Column(Integer, ForeignKey('assertion_type.id', ondelete='SET NULL'), nullable=True)
 
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'value': self.value,
+            'data': self.data,
+            'type_id': self.assertion_type_id,
+            'display_name': f'{self.value} ({self.description})',
+        }
 
 class EntityAssertion(Base, AssertionMixin):
     __tablename__ = 'entity_assertion'
@@ -900,21 +928,26 @@ class AreaClass(Base, TimestampMixin):
 #HAST: country (249), province (142), hsienCity (97), hsienTown (371), additionalDesc(specimen.locality_text): ref: hast_id: 144954
 
     __tablename__ = 'area_class'
-    DEFAULT_OPTIONS = [
-        {'id': 1, 'name': 'country', 'label': '國家'},
-        {'id': 2, 'name': 'stateProvince', 'label': '省/州', 'parent': 'country', 'root': 'country'},
-        {'id': 3, 'name': 'county', 'label': '縣/市', 'parent': 'stateProvince', 'root': 'country'},
-        {'id': 4, 'name': 'municipality', 'label': '鄉/鎮', 'parent': 'county', 'root': 'country'},
-        {'id': 5, 'name': 'national_park', 'label': '國家公園'},
-        {'id': 6, 'name': 'locality', 'label': '地名'},
-    ]
+    # DEFAULT_OPTIONS = [
+    #     {'id': 1, 'name': 'country', 'label': '國家'},
+    #     {'id': 2, 'name': 'stateProvince', 'label': '省/州', 'parent': 'country', 'root': 'country'},
+    #     {'id': 3, 'name': 'county', 'label': '縣/市', 'parent': 'stateProvince', 'root': 'country'},
+    #     {'id': 4, 'name': 'municipality', 'label': '鄉/鎮', 'parent': 'county', 'root': 'country'},
+    #     {'id': 5, 'name': 'national_park', 'label': '國家公園'},
+    #     {'id': 6, 'name': 'locality', 'label': '地名'},
+    # ]
 
     id = Column(Integer, primary_key=True)
     name = Column(String(500))
     label = Column(String(500))
+    sort = Column(Integer)
+    parent_id = Column(Integer, ForeignKey('area_class.id', ondelete='SET NULL'), nullable=True)
     collection_id = Column(Integer, ForeignKey('collection.id', ondelete='SET NULL'), nullable=True)
-    organization_id = Column(Integer, ForeignKey('organization.id', ondelete='SET NULL'), nullable=True)
+    # organization_id = Column(Integer, ForeignKey('organization.id', ondelete='SET NULL'), nullable=True)
     #org = models.ForeignKey(on_delete=models.SET_NULL, null=True, blank=True)
+    # parent = relationship('AreaClass', foreign_keys=[parent_id], uselist=False)
+    parent = relationship('AreaClass', remote_side=id)
+    collection = relationship('Collection', back_populates='area_classes')
 
     def to_dict(self):
         return {
@@ -939,12 +972,19 @@ class NamedArea(Base, TimestampMixin):
     area_class = relationship('AreaClass', backref=backref('named_area'))
     source_data = Column(JSONB)
     parent_id = Column(Integer, ForeignKey('named_area.id', ondelete='SET NULL'), nullable=True)
+    #parent = relationship('NamedArea', foreign_keys=[parent_id])
 
+    @property
     def display_name(self):
         return '{}{}'.format(
             self.name_en if self.name_en else '',
             f' ({self.name})' if self.name.strip() else ''
         )
+
+    def get_higher_area_classes(self):
+        if self.parent_id:
+            print('hierarchy', NamedArea.query.filter(NamedArea.id==self.parent_id).first(), flush=True)
+            # TODO
 
     @property
     def name_best(self):
@@ -963,8 +1003,9 @@ class NamedArea(Base, TimestampMixin):
             'area_class_id': self.area_class_id,
             'area_class': self.area_class.to_dict(),
             #'name_mix': '/'.join([self.name, self.name_en]),
-            'display_name': self.display_name() or '',
+            'display_name': self.display_name or '',
             #'name_best': self.name_best,
+            # 'higher_area_classes': self.get_higher_area_classes(),
         }
         if with_meta is True:
             data['meta'] = {

@@ -33,7 +33,7 @@ def make_proj(con):
         next(spamreader)
         for row in spamreader:
             print (row, flush=True)
-            p = Project(name=row[1])
+            p = Project(name=row[1], collection_id=1)
             session.add(p)
         session.commit()
 
@@ -43,8 +43,11 @@ def make_person(con):
         #print(r)
         org = ''
         atom_name = {}
-        abbr_name = ''
         full_name = r[6]
+        full_name_en = ''
+        abbr_name = r[1]['nameAbbr'] if len(r[1]) else ''
+        org_name = r[1]['organAbbr'] if len(r[1]) else ''
+        '''
         if len(r[1]) > 0:
             # has source_data
             org = r[1]['organAbbr']
@@ -57,23 +60,24 @@ def make_person(con):
             }
             if name_other := r[1]['nameOther']:
                 atom_name['other'] = name_other
-
-        if not full_name:
-            name_list = []
-            if first_name := r[1]['firstName']:
-                name_list.append(first_name)
-            if last_name := r[1]['lastName']:
-                name_list.append(last_name)
-            full_name = ' '.join(name_list)
+        '''
+        name_list = []
+        if first_name := r[1].get('firstName'):
+            name_list.append(first_name)
+        if last_name := r[1].get('lastName'):
+            name_list.append(last_name)
+        full_name_en = ' '.join(name_list)
 
         p = Person(
             full_name=full_name,
+            full_name_en=full_name_en,
             abbreviated_name=abbr_name,
-            atomized_name=atom_name,
+            organization_name=org_name,
+            #atomized_name=atom_name,
             source_data=r[1],
             is_collector=r[3],
-            is_identifier=r[4],
-            organization=org)
+            is_identifier=r[4]
+        )
         session.add(p)
     session.commit()
 
@@ -81,7 +85,7 @@ def make_geospatial(con):
 
     rows = con.execute('SELECT * FROM specimen_areaclass ORDER BY id')
     for r in rows:
-        ac = AreaClass(name=r[1], label=r[2])
+        ac = AreaClass(name=r[1], label=r[2], collection_id=1)
         session.add(ac)
     session.commit()
 
@@ -164,7 +168,7 @@ def make_assertion_type_option(con):
         if row[2] == 'veget':
             group_name = row[4].get('typeC')
         # print (pid, group_name, row, flush=True)
-        opt = AssertionTypeOption(value=row[1], assertion_type_id=int(PARAM_MAP2[row[2]]), data=row[4], description=row[3])
+        opt = AssertionTypeOption(value=row[1], assertion_type_id=int(PARAM_MAP2[row[2]]), data=row[4], description=row[3], )
         session.add(opt)
         session.commit()
     return {}
@@ -197,6 +201,7 @@ def make_entity(con):
             field_note=r[16],
             field_note_en=r[17],
             source_data=r[4],
+            collection_id=1,
         )
 
         if hast := r[4].get('hast'):
@@ -405,7 +410,7 @@ def make_entity(con):
                 )
                 session.add(tr)
 
-        col.proxy_unit_accession_numbers = '|'.join(an_list)
+        #col.proxy_unit_accession_numbers = '|'.join(an_list)
         # save unit
         session.commit()
 
@@ -413,10 +418,10 @@ def make_entity(con):
 def make_taxon(con):
     rows_init = con.execute(f"SELECT * FROM taxon_taxon")
     rows = [x for x in rows_init]
-    tree = TaxonTree(name='HAST-legacy')
-    session.add(tree)
-    session.commit()
-    #tree = TaxonTree.query.filter(TaxonTree.id==1).first()
+    #tree = TaxonTree(name='HAST-legacy')
+    #session.add(tree)
+    #session.commit()
+    tree = TaxonTree.query.filter(TaxonTree.id==1).first()
 
     for r in rows:
         sn = Taxon(
@@ -527,7 +532,7 @@ def make_other_csv():
         for row in reader:
             #print(row['typeSpecimenOrderNum'],row['typeCateID'], , flush=True)
             an = row['typeSpecimenOrderNum']
-            if u := Unit.query.filter(Unit.accession_number==an).first():
+            if u := Unit.query.filter(Unit.catalog_number==an).first():
                 u.type_status = TMAP[row['typeCateID']]
                 u.typified_name = row['verSpeciesE']
                 u.type_reference = row['reference']
@@ -561,7 +566,7 @@ def make_images(con):
             if sn := row['SN']:
                 r = con.execute(f"SELECT a.accession_number FROM specimen_accession AS a LEFT JOIN specimen_specimen AS s ON s.id=a.specimen_id WHERE s.source_id='{sn}'")
                 if x:= r.first():
-                    if u := Unit.query.filter(Unit.accession_number==x[0]).first():
+                    if u := Unit.query.filter(Unit.catalog_number==x[0]).first():
 
                         file_url = ''
                         if 'P_' in row['imageCode']:
@@ -608,7 +613,7 @@ def conv_hast21(key):
             make_entity(con)
         elif key == 'assertion_type_option':
             make_assertion_type_option(con)
-        elif key == 'make_proj':
+        elif key == 'proj':
             make_proj(con)
         elif key == 'other-csv':
             make_other_csv()
@@ -635,7 +640,7 @@ def process_text(process_list, text_list):
 
 def get_record(key):
     unit = None
-    collection = None
+    entity = None
     record = {}
     if key[0] == 'u':
         unit = Unit.query.get(key[1:])
@@ -643,15 +648,16 @@ def get_record(key):
         record = {
             'type': 'unit',
             'unit': unit,
-            'collection': unit.collection,
+            'entity': unit.entity,
         }
-    elif key[0] == 'c':
-        collection = Collection.query.get(key[1:])
+    elif key[0] == 'e':
+        entity = session.get(Entity, key[1:])
         record = {
-            'type': 'collection',
-            'collection': collection,
+            'type': 'entity',
+            'entity': entity,
         }
 
+    '''
     # generate label text
     # ordered dict after python 3.6
     hast_label_policy = {
@@ -745,4 +751,118 @@ def get_record(key):
         'annotation_list': annotations,
     })
     #print(annotations, flush=True)
+    '''
     return record
+
+
+def import_checklist():
+    nlist = '''Reinboldiella warburgii (Heydrich) Yoshida et Mikami
+    Augophyllum kentingii Lin, Fredericq et Hommersand
+    Gracilaria huangii Lin & de Clerck
+    Martensia lewisiae Lin, Hommersand & Fredericq
+    Martensia formosana Lin, Hommersand & Fredericq
+    Gracilaria huangii Lin & de Clerck
+    Dichotomaria hommersandii S.-L. Liu et S.-M. Lin
+    Actinotrichia taiwanica S. L. Liu et W. L. Wang
+    Actinotrichia fragilis (Forsskal) Børgesen
+    Actinotrichia robusta Itono
+    Gelidiophycus hongkonensis S.-M. Lin & L.-C. Liu'''
+
+    count = 0
+    #cnames = list(map(lambda x: '{} {}'.format(x.split(' ')[0], x.split(' ')[1]), nlist.split('\n')))
+    higher_rank_list = ['kingdom', 'phylum', 'class', 'order', 'family', 'genus']
+    name = './data/TaiwanSpecies20221102_UTF8.csv'
+    import csv
+    def nonull(s):
+        if s == 'NULL':
+            return ''
+        else:
+            return s
+
+    rank = {
+    }
+
+    with open(name, 'r') as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            '''
+            parents = []
+            for rank in higher_rank_list:
+                if t := Taxon.query.filter(Taxon.full_scientific_name==row[rank], Taxon.rank==rank, Taxon.tree_id==2).first():
+                    parents.append(t.id)
+                else:
+                    t = Taxon(full_scientific_name=row[rank], rank=rank, tree_id=2)
+                    #tr = TaxonRelation(depth=0, parent_id=t.id, child_id=)
+                    session.add(t)
+                    session.commit()
+                    parents.append(t.id)
+            '''
+            # get full name
+            fname_list = []
+            if x := nonull(row['genus']):
+                fname_list.append(x)
+            if x := nonull(row['species']):
+                fname_list.append(x)
+            if nonull(row['author2']):
+                if x := nonull(row['author']):
+                    fname_list.append(x)
+            if x := nonull(row['infraspecies_marker']):
+                if y := nonull(row['infraspecies']):
+                    fname_list.append(x)
+                else:
+                    fname_list.append(f'[{x}]')
+            if x := nonull(row['infraspecies']):
+                fname_list.append(x)
+            if x := nonull(row['infraspecies2_marker']):
+                fname_list.append(x)
+            if x := nonull(row['infraspecies2']):
+                fname_list.append(x)
+            if x := nonull(row['author2']):
+                fname_list.append(x)
+            elif x:= nonull(row['author']):
+                fname_list.append(x)
+
+            t = Taxon(
+                canonical_name=nonull(row['name']),
+                rank='species',
+                first_epithet=nonull(row['species']),
+                author=nonull(row['author']),
+                common_name=nonull(row['common_name_c']),
+                source_data=row,
+                is_accepted=True if nonull(row['is_accepted_name']) == '1' else False,
+                provider_id=1,
+                provider_source_id=nonull(row['name_code']),
+                full_scientific_name=' '.join(fname_list),
+            )
+
+            if nonull(row['author']) and nonull(row['author2']) and row['kingdom'] == 'Plantae':
+                print(row, flush=True)
+                break
+            #if row['genus'] == 'Pyropia' and row['species'] == 'acanthophora':
+            #if nonull(row['infraspecies2_marker']): # good example
+            # author2 122976
+            # if nonull(row['name_code'] == '420365'):
+            #         print(row, flush=True)
+            #         print(fname_list, flush=True)
+            #     break
+
+            #if row['phylum'] == 'Rhodophyta' and row['is_accepted_name'] == '1':
+            #    print(row, flush=True)
+            #    break
+            #    count += 1
+            #break
+
+            #session.add(t)
+            #session.commit()
+
+            '''
+            tr = TaxonRelation(parent_id=t.id, child_id=t.id, depth=0)
+            session.add(tr)
+            for index, pid in enumerate(parents):
+                depth = len(parents) - index
+                TaxonRelation.query.filter(TaxonRelation.parent_id==pid, ).first()
+                tr = TaxonRelation(parent_id=pid, child_id=t.id, depth=len(parents)-index)
+                tr = TaxonRelation(parent_id=pid, child_id=t.id, depth=len(parents)-index)
+            session.commit()
+            '''
+        print(count)

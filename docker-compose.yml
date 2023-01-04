@@ -41,4 +41,4 @@ services:
     volumes:
       - ../naturedb-volumes/pgdata:/var/lib/postgresql/data/pgdata
       - ../naturedb-volumes/bucket:/bucket
-    #command: ["postgres", "-c", "log_statement=all"]
+    command: ["postgres", "-c", "log_statement=all"]
