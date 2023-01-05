@@ -39,6 +39,7 @@ def make_proj(con):
 
 def make_person(con):
     rows = con.execute('SELECT * FROM specimen_person ORDER BY id')
+    people = []
     for r in rows:
         #print(r)
         org = ''
@@ -79,13 +80,26 @@ def make_person(con):
             is_identifier=r[4]
         )
         session.add(p)
+        people.append(p)
+
+    c = session.get(Collection, 1)
+    c.people = people
     session.commit()
 
 def make_geospatial(con):
 
     rows = con.execute('SELECT * FROM specimen_areaclass ORDER BY id')
+    counter = 0
+    the_map = {
+        'province': 'stateProvince',
+        'hsien': 'county',
+        'town': 'municipality',
+    }
     for r in rows:
-        ac = AreaClass(name=r[1], label=r[2], collection_id=1)
+        counter += 1
+        ac = AreaClass(name=the_map[r[1]] if the_map.get(r[1]) else r[1], label=r[2], collection_id=1, sort=counter)
+        if counter > 1 and counter <= 4:
+            ac.parent_id = counter - 1
         session.add(ac)
     session.commit()
 
@@ -418,10 +432,10 @@ def make_entity(con):
 def make_taxon(con):
     rows_init = con.execute(f"SELECT * FROM taxon_taxon")
     rows = [x for x in rows_init]
-    #tree = TaxonTree(name='HAST-legacy')
-    #session.add(tree)
-    #session.commit()
-    tree = TaxonTree.query.filter(TaxonTree.id==1).first()
+    tree = TaxonTree(name='HAST-legacy')
+    session.add(tree)
+    session.commit()
+    #tree = TaxonTree.query.filter(TaxonTree.id==1).first()
 
     for r in rows:
         sn = Taxon(

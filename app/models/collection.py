@@ -739,24 +739,21 @@ class Person(Base, TimestampMixin):
     def __repr__(self):
         return '<Person(id="{}", display_name="{}")>'.format(self.id, self.display_name)
 
-    @property
-    def english_name(self):
-        if self.atomized_name and len(self.atomized_name):
-            if en_name := self.atomized_name.get('en', ''):
-                return '{} {}'.format(en_name['inherited_name'], en_name['given_name'])
-        return ''
+    # @property
+    # def english_name(self):
+    #     if self.atomized_name and len(self.atomized_name):
+    #         if en_name := self.atomized_name.get('en', ''):
+    #             return '{} {}'.format(en_name['inherited_name'], en_name['given_name'])
+    #     return ''
 
     @property
     def display_name(self):
-        # todo
-        name = ''
-        if name := self.english_name:
-            if fname := self.full_name:
-                name = '{} ({})'.format(name, fname)
-        elif self.full_name:
-            name =  self.full_name
-
-        return name or ''
+        name_list = []
+        if x := self.full_name:
+            name_list.append(x)
+        if x := self.full_name_en:
+            name_list.append(f'({x})')
+        return ' '.join(name_list)
 
     def to_dict(self, with_meta=False):
         data = {
@@ -764,8 +761,8 @@ class Person(Base, TimestampMixin):
             'display_name': self.display_name,
             'full_name': self.full_name,
             #'atomized_name': self.atomized_name,
-            #'full_name_en': self.full_name_en,
-            'english_name': self.english_name,
+            'full_name_en': self.full_name_en,
+            #'english_name': self.english_name,
             'abbreviated_name': self.abbreviated_name,
             'preferred_name': self.preferred_name,
             'is_collector': self.is_collector,

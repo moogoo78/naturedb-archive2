@@ -30,3 +30,5 @@ ENV FLASK_APP=wsgi.py
 ENV FLASK_DEBUG=1
 ENV FLASK_ENV=development
 # CMD ["/root/.local/bin/flask", "run", "--host", "0.0.0.0"]
+
+ENTRYPOINT ["/srv/entrypoint"]

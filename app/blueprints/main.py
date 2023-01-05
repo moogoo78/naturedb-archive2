@@ -30,6 +30,7 @@ from app.database import session
 # )
 from app.models.site import (
     Article,
+    Organization,
 )
 from app.models.collection import (
     Unit,
@@ -323,7 +324,8 @@ def data_explore():
     options = {
         'type_status': Unit.TYPE_STATUS_CHOICES,
     }
-    return render_template('data-explore.html', options=options)
+    org = session.get(Organization, 1)
+    return render_template('data-explore.html', options=options, organization=org)
 
 @main.route('/robots.txt')
 def robots_txt():

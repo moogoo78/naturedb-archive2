@@ -12,6 +12,8 @@ import { fetchData } from './utils.js';
   const $show = (id) => { document.getElementById(id).removeAttribute('hidden'); }
   const $hide = (id) => { document.getElementById(id).setAttribute('hidden', ''); }
   const $replaceQueryString = (search) => { history.replaceState(null, '', `${window.location.origin}${window.location.pathname}?${search}`); };
+ 
+  const searchNavItems = $getClass('de-search-nav-item');
 
   const TERM_LABELS = {
     field_number: '採集號',
@@ -22,6 +24,7 @@ import { fetchData } from './utils.js';
     named_area: '地點',
     catalog_number: '館號',
     q: '搜尋字串',
+    collection: '典藏類別',
   };
   // global state
   const state = {
@@ -39,7 +42,7 @@ import { fetchData } from './utils.js';
   const searchInput = $get('de-searchbar__input');
   const choiceList = $get('de-searchbar__dropdown__list');
   const tokenList = $get('de-tokens');
-  const submitButton = $get('phok-submit');
+  const submitButton = $get('de-submit-button');
   const resultsTBody = document.getElementById('phok-results-tbody');
 
   // # init
@@ -422,7 +425,7 @@ import { fetchData } from './utils.js';
     e.stopPropagation();
 
     let value = filterInput.value;
-    // HACK type status 
+    // HACK type status
     if (filterInput.dataset.key === 'type_status') {
       value = $filterTypeStatusSelect.value;
       myFilter.add('type_status', {
@@ -723,6 +726,27 @@ import { fetchData } from './utils.js';
           $replaceQueryString(qs);
         }
       })
+  }
+
+  for (const item of searchNavItems) {
+    item.onclick = (e) => {
+      e.preventDefault();
+      const collectionName = e.currentTarget.dataset.collection;
+      const collectionLabel = e.currentTarget.innerHTML;
+      submitButton.innerHTML = `搜尋${collectionLabel}`;
+
+      if (collectionName !== '__all__') {
+        myFilter.add('collection', {
+          value: collectionName,
+          meta: {
+            term: 'collection',
+            label: TERM_LABELS['collection'],
+            display: collectionLabel,
+          }
+        });
+        refreshTokens();
+      }
+    }
   }
 
   init();

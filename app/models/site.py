@@ -25,12 +25,12 @@ from app.database import (
     TimestampMixin,
 )
 
-organization_collection = Table(
-    'organization_collection',
-    Base.metadata,
-    Column('organization_id', ForeignKey('organization.id')),
-    Column('collection_id', ForeignKey('collection.id')),
-)
+# organization_collection = Table(
+#     'organization_collection',
+#     Base.metadata,
+#     Column('organization_id', ForeignKey('organization.id')),
+#     Column('collection_id', ForeignKey('collection.id')),
+# )
 
 class User(Base, UserMixin, TimestampMixin):
     __tablename__ = 'user'
@@ -61,9 +61,10 @@ class Organization(Base, TimestampMixin):
     short_name = Column(String(500))
     code = Column(String(500))
     related_link_categories = relationship('RelatedLinkCategory')
-    collections = relationship('Collection', secondary=organization_collection)
-    default_collection_id = Column(Integer, ForeignKey('collection.id', ondelete='SET NULL'), nullable=True)
-    default_collection = relationship('Collection', primaryjoin='Organization.default_collection_id == Collection.id')
+    #collections = relationship('Collection', secondary=organization_collection)
+    collections = relationship('Collection')
+    #default_collection_id = Column(Integer, ForeignKey('collection.id', ondelete='SET NULL'), nullable=True)
+    #default_collection = relationship('Collection', primaryjoin='Organization.default_collection_id == Collection.id')
 
     def to_dict(self):
         return {

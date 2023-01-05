@@ -147,12 +147,13 @@ def put_record(entity, data, is_create=False):
                 o2m[name_class][num]['assertion'][assertion_part] = value
 
     named_areas = []
-    #print(m2m, flush=True)
+    # print(m2m, flush=True)
     for i in m2m['named_areas']:
         # only need id
         if obj := session.get(NamedArea, int(i[1])):
             named_areas.append(obj)
 
+    assertions = []
     for i in m2m['entity_assertions']:
         type_id = int(i[0])
         val = i[1]
@@ -163,6 +164,9 @@ def put_record(entity, data, is_create=False):
         else:
             ea = EntityAssertion(entity_id=entity.id, assertion_type_id=type_id, value=val)
             session.add(ea)
+
+        if ea:
+            assertions.append(ea)
 
     # print(o2m, flush=True)
     updated_identifications = []
@@ -221,6 +225,8 @@ def put_record(entity, data, is_create=False):
         unit.type_reference_link = v.get('type_reference_link')
         updated_units.append(unit)
 
+    entity.named_areas = named_areas
+    entity.assertions = assertions
     entity.identifications = updated_identifications
     entity.units = updated_units
 
@@ -262,6 +268,7 @@ def record_list():
     #.join(Unit, Unit.entity_id==Entity.id, isouter=True) \
     #.join(Person, Entity.collector_id==Person.id, isouter=True)
     stmt = select(Unit.id, Unit.catalog_number, Entity.id, Entity.collector_id, Entity.field_number, Entity.collect_date, Entity.proxy_taxon_scientific_name, Entity.proxy_taxon_common_name).join(Unit, Unit.entity_id==Entity.id, isouter=True)
+    print(stmt, flush=True)
     if q:
         stmt = select(Unit.id, Unit.catalog_number, Entity.id, Entity.collector_id, Entity.field_number, Entity.collect_date, Entity.proxy_taxon_scientific_name, Entity.proxy_taxon_common_name) \
         .join(Unit, Unit.entity_id==Entity.id, isouter=True) \
@@ -282,8 +289,6 @@ def record_list():
     count_stmt = select(func.count()).select_from(subquery)
     total = session.execute(count_stmt).scalar()
 
-    result = session.execute(stmt)
-
     # order & limit
     stmt = stmt.order_by(desc(Entity.id))
     if current_page > 1:
@@ -292,7 +297,7 @@ def record_list():
 
     result = session.execute(stmt)
     rows = result.all()
-
+    # print(stmt, '==', flush=True)
     last_page = math.ceil(total / 20)
     pagination = {
         'current_page': current_page,
@@ -331,7 +336,6 @@ def record_list():
         }
 
         records.append(record)
-
 
     return render_template(
         'admin/record-list-view.html',
@@ -397,7 +401,7 @@ def record_form(item_id):
             session.add(history)
             session.commit()
             return jsonify({'message': 'ok', 'next_url': url_for('admin.record_list')})
-
+    return abort(404)
 
 @admin.route('/api/units/<int:item_id>', methods=['DELETE'])
 def api_unit_delete(item_id):

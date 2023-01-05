@@ -36,7 +36,11 @@ services:
     container_name: naturedb-postgres-${WEB_ENV}-container
     restart: always
     environment:
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
       - ../naturedb-volumes/pgdata:/var/lib/postgresql/data/pgdata

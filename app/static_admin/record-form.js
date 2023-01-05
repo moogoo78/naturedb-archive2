@@ -128,6 +128,8 @@
               });
           } else {
             //UIkit.dropdown(`#${conf.dropdownId}`).hide(false);
+            const inputValue = document.getElementById(`${state.input.name}__hidden_value`);
+            inputValue.value = '';
           }
         }
       });

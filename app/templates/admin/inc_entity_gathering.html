@@ -129,7 +129,7 @@
       <div class="uk-form-controls">
         <div class="uk-inline uk-width-1-1">
           <span class="uk-form-icon uk-form-icon-flip" uk-icon="icon: triangle-down"></span>
-          <input id="entity_assertions__{{ i.name }}-input" class="uk-input" type="text" placeholder="" name="entity_assertions__{{ i.id }}" autocapitalize="none" autocorrect="off" autocomplete="off" my-listbox="urlPrefix: /api/v1/assertion_type_options; itemDisplay: display_name; appendQuery: type_id={{ i.id }}; preFetch; itemSelect:value;" value="{{ defaultEntityAssertion or '' }}"/>
+          <input id="entity_assertions__{{ i.name }}-input" class="uk-input" type="text" placeholder="" name="entity_assertions__{{ i.id }}" autocapitalize="none" autocorrect="off" autocomplete="off" my-listbox="urlPrefix: /api/v1/assertion_type_options; itemDisplay: display_name; appendQuery: type_id={{ i.id }}; preFetch; itemSelect:value;{% if defaultEntityAssertion %}defaultValue:{{ defaultEntityAssertion }}{% endif %}" value="{{ defaultEntityAssertion or '' }}"/>
         </div>
       </div>
     </div>

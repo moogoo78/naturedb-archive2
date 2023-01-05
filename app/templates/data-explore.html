@@ -35,10 +35,22 @@
       </div>
       {% endwith %}
     </div>
-    <div class="uk-width-small">
+    <div class="uk-width-auto">
       <div class="uk-flex uk-flex-middle">
-        <div>
-          <button id="phok-submit" class="uk-button uk-button-primary uk-form-large">Search</button>
+        <div class="uk-button-group">
+          <button class="uk-button uk-button-default uk-form-large" id="de-submit-button">搜尋全部</button>
+          <div class="uk-inline">
+            <button class="uk-button uk-button-default uk-form-large" type="button" aria-label="Toggle Dropdown"><span uk-icon="icon:  triangle-down"></span></button>
+            <div uk-dropdown="mode: click; target: !.uk-button-group;">
+              <ul class="uk-nav uk-dropdown-nav">
+                <li><a href="#" data-collection="__all__" class="de-search-nav-item">全部</a></li>
+                <li class="uk-nav-header">Collections</li>
+                {% for c in organization.collections %}
+                <li><a href="#" data-collection="{{ c.name }}" class="de-search-nav-item">{{ c.label }}</a></li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
         </div>
         <div class="uk-margin-left">{% include "_inc_data-explore_adv-filter.html" %}</div>
       </div>

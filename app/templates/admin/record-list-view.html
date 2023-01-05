@@ -54,7 +54,7 @@
       {% for r in records %}
       <tr>
         <td><a href="{{ url_for('admin.record_form', item_id=r.entity_id) }}" uk-icon="icon: pencil"></a></td>
-        <td><a id="checkbox-{{ r.record_key }}" href="#" uk-icon="{% if r.is_fav %}heart{% else %}crosshairs{% endif %}" class="favorite-checkbox" data-record-key="{{ r.record_key }}" data-uid="{{ current_user.id }}"></a></td>
+        <td><a id="checkbox-{{ r.record_key }}" href="#" uk-icon="{% if r.is_fav %}heart{% else %}minus{% endif %}" class="favorite-checkbox" data-record-key="{{ r.record_key }}" data-uid="{{ current_user.id }}"></a></td>
         <td>{{ loop.index + (pagination.current_page - 1) * 20 }}</td>
         <td>{{ r.catalog_number }}</td>
         <td>{{ r.scientific_name }}{%if r.common_name %} ({{ r.common_name }}){% endif %}</td>

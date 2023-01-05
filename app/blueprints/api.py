@@ -62,11 +62,14 @@ def make_query_response(query):
         'query': str(query),
         'elapsed': elapsed,
     }
+    # print(result, flush=True)
     return result
 
 def record_filter(stmt, payload):
     filtr = payload['filter']
-
+    if value := filtr.get('collection'):
+        if c := Collection.query.filter(Collection.name==value).scalar():
+            stmt = stmt.where(Entity.collection_id==c.id)
     if catalog_number := filtr.get('catalog_number'):
         cn_list = [catalog_number]
 
@@ -701,20 +704,20 @@ def get_person_detail(id):
 @api.route('/people', methods=['GET'])
 def get_person_list():
     query = Person.query.select_from(Collection).join(Collection.people)
-
     if filter_str := request.args.get('filter', ''):
         filter_dict = json.loads(filter_str)
         collector_id = None
         if keyword := filter_dict.get('q', ''):
             like_key = f'{keyword}%' if len(keyword) == 1 else f'%{keyword}%'
-            query = query.filter(Person.full_name.ilike(like_key) | Person.atomized_name['en']['given_name'].astext.ilike(like_key) | Person.atomized_name['en']['inherited_name'].astext.ilike(like_key))
+            # query = query.filter(Person.full_name.ilike(like_key) | Person.atomized_name['en']['given_name'].astext.ilike(like_key) | Person.atomized_name['en']['inherited_name'].astext.ilike(like_key))
+            query = query.filter(Person.full_name.ilike(like_key) | Person.full_name_en.ilike(like_key))
         if is_collector := filter_dict.get('is_collector', ''):
             query = query.filter(Person.is_collector==True)
         if is_identifier := filter_dict.get('is_identifier', ''):
             query = query.filter(Person.is_identifier==True)
 
-        if x := filter_dict.get('collector_id', ''):
-            collector_id = x
+        #if x := filter_dict.get('collector_id', ''):
+        #    collector_id = x
         if x := filter_dict.get('id', ''):
             query = query.filter(Person.id.in_(x))
         if collection_id := filter_dict.get('collection_id', ''):
